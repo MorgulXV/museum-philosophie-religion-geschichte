@@ -73,7 +73,9 @@ function markDirty() { _dirty = true; }
 
 controls.addEventListener('lock',   () => { hideOverlay(); markDirty(); });
 controls.addEventListener('unlock', () => {
-  if (!suppressOverlay) {
+  // Show overlay only when user presses Escape mid-exploration (no panel open).
+  // Panel-close path re-locks immediately; that also fires 'lock', not 'unlock'.
+  if (!suppressOverlay && panelEl.hasAttribute('hidden')) {
     showOverlay();
     enterBtn.textContent = 'Weiter →';
   }
@@ -84,11 +86,19 @@ controls.addEventListener('unlock', () => {
 const origActivate = interaction._activate.bind(interaction);
 interaction._activate = (id) => { suppressOverlay = true; origActivate(id); };
 
+// Panel close → re-enter museum without overlay step.
+// Called directly from click/keydown (user-gesture context) so requestPointerLock is allowed.
+function reenterMuseum() { controls.lock(); }
+
+document.getElementById('panel-close').addEventListener('click', reenterMuseum);
+document.getElementById('panel-overlay').addEventListener('click', reenterMuseum);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !panelEl.hasAttribute('hidden')) reenterMuseum();
+});
+
 new MutationObserver(() => {
   if (panelEl.hasAttribute('hidden')) {
     interaction.clearInfluenceLines();
-    showOverlay();
-    enterBtn.textContent = 'Weiter →';
   }
   markDirty();
 }).observe(panelEl, { attributes: true, attributeFilter: ['hidden'] });
