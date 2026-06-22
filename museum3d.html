@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D-Museum — Philosophie, Religion &amp; Geschichte</title>
+  <link rel="stylesheet" href="css/museum.css">
+  <link rel="stylesheet" href="css/museum3d.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <script type="importmap">
+  {
+    "imports": {
+      "three":           "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+      "three/addons/":   "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <canvas id="museum3d-canvas" aria-label="Interaktiver 3D-Museumsraum"></canvas>
+
+  <!-- Entry / pause overlay -->
+  <div id="enter-overlay">
+    <h1>3D-Museum</h1>
+    <p>WASD / Pfeiltasten — gehen &nbsp;·&nbsp; Maus — umsehen<br>
+       Klick auf Exponat — Details öffnen &nbsp;·&nbsp; ESC — Menü</p>
+    <button id="enter-btn">Eintreten</button>
+    <a href="index.html" class="back-2d">← Zur 2D-Ansicht</a>
+  </div>
+
+  <!-- Room indicator (top-center, shown while locked) -->
+  <div id="room-label" hidden aria-live="polite"></div>
+
+  <!-- Crosshair -->
+  <div id="crosshair" hidden aria-hidden="true">·</div>
+
+  <!-- Hover label (below crosshair) -->
+  <div id="hover-label" hidden aria-hidden="true"></div>
+
+  <!-- Exhibit panel — same DOM as 2D site so panel.js works unchanged -->
+  <div id="panel-overlay" aria-hidden="true"></div>
+  <aside id="exhibit-panel" role="dialog" aria-modal="true"
+         aria-label="Exponat-Details" hidden>
+    <button id="panel-close" aria-label="Panel schließen">✕</button>
+    <div id="panel-content"></div>
+  </aside>
+
+  <script type="module" src="js/3d/main3d.js"></script>
+  <script type="module" src="js/panel.js"></script>
+</body>
+</html>

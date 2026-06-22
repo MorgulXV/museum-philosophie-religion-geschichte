@@ -1,0 +1,705 @@
+/* styles.css — Faith & Reason */
+
+/* ─── Design tokens ───────────────────────────────────────────────────────── */
+
+:root {
+  /* Neutral palette */
+  --color-bg:             #F8F6F2;
+  --color-surface:        #F0EDE7;
+  --color-border:         #D8D4CB;
+  --color-border-strong:  #B8B3A8;
+  --color-text-primary:   #1C1A16;
+  --color-text-secondary: #5C5A55;
+  --color-text-muted:     #96938D;
+
+  /* Per-room accent colours */
+  --color-accent-i:       #5478A8;   /* Antiquity — slate blue */
+  --color-accent-ii:      #5C7E5F;   /* Early Middle Ages — sage */
+  --color-accent-iii:     #C87941;   /* High Scholasticism — amber */
+  --color-accent-iv:      #7055A0;   /* Reformation — violet */
+  --color-accent-v:       #3E7875;   /* Modern — teal */
+
+  /* Generic room accent — overridden per-section via inline style */
+  --room-accent: var(--color-accent-iii);
+
+  /* Typography */
+  --font-serif: Georgia, 'Palatino Linotype', 'Times New Roman', serif;
+  --font-sans:  'Helvetica Neue', Arial, system-ui, -apple-system, sans-serif;
+
+  /* Type scale */
+  --text-xs:   0.6875rem;   /* 11px */
+  --text-sm:   0.8125rem;   /* 13px */
+  --text-base: 1rem;        /* 16px */
+  --text-lg:   1.125rem;    /* 18px */
+  --text-xl:   1.375rem;    /* 22px */
+  --text-2xl:  1.75rem;     /* 28px */
+  --text-3xl:  2.25rem;     /* 36px */
+  --text-4xl:  3rem;        /* 48px */
+  --text-5xl:  4rem;        /* 64px */
+
+  /* Line heights */
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.65;
+
+  /* Spacing — 4 px base */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Layout */
+  --max-width:     72rem;
+  --nav-height:    3rem;
+  --section-pad-x: clamp(var(--space-6), 6vw, var(--space-16));
+}
+
+/* ─── Reset ───────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+}
+
+/* ─── Navigation ──────────────────────────────────────────────────────────── */
+
+#site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+#site-nav ul {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--section-pad-x);
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+#site-nav ul::-webkit-scrollbar {
+  display: none;
+}
+
+#site-nav li {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+#site-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+#site-nav a:hover {
+  color: var(--color-text-primary);
+}
+
+#site-nav a:focus-visible {
+  outline: 2px solid var(--color-accent-iii);
+  outline-offset: -2px;
+}
+
+/* Active nav item — scroll-spy JS will add aria-current="page" */
+#site-nav a[aria-current="page"],
+#site-nav a.active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-accent-iii);
+  font-weight: 600;
+}
+
+/* 3D toggle — right-edge nav item */
+
+.nav-toggle-item {
+  margin-left: auto;
+  padding-left: var(--space-6);
+  flex-shrink: 0;
+}
+
+.toggle-3d-btn {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-4);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  line-height: var(--leading-tight);
+}
+
+.toggle-3d-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+.toggle-3d-btn:focus-visible {
+  outline: 2px solid var(--color-accent-iii);
+  outline-offset: 2px;
+}
+
+body.mode-3d .toggle-3d-btn {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+/* ─── Main layout ─────────────────────────────────────────────────────────── */
+
+main {
+  padding-top: var(--nav-height);
+}
+
+/* ─── Lobby ───────────────────────────────────────────────────────────────── */
+
+#lobby {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100svh;
+  padding: var(--space-24) var(--section-pad-x);
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+#lobby h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(var(--text-3xl), 9vw, var(--text-5xl));
+  font-weight: normal;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-6);
+}
+
+#lobby p {
+  font-size: var(--text-lg);
+  color: var(--color-text-secondary);
+  max-width: 40ch;
+  margin-bottom: var(--space-10);
+}
+
+#lobby a {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  border-bottom: 2px solid var(--color-text-primary);
+  padding-bottom: var(--space-1);
+  transition: opacity 0.15s;
+}
+
+#lobby a:hover {
+  opacity: 0.6;
+}
+
+#lobby a:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 4px;
+}
+
+.lobby-links {
+  display: flex;
+  gap: var(--space-8);
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+/* ─── Room sections (all five) ────────────────────────────────────────────── */
+
+#room-1, #room-2, #room-3, #room-4, #room-5 {
+  border-top: 1px solid var(--color-border);
+}
+
+.room-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-20) var(--section-pad-x) var(--space-16);
+}
+
+/* Room header */
+
+.room-header {
+  margin-bottom: var(--space-16);
+}
+
+.room-era-label {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--room-accent);
+  margin-bottom: var(--space-3);
+}
+
+.room-title {
+  font-family: var(--font-serif);
+  font-size: clamp(var(--text-2xl), 7vw, var(--text-4xl));
+  font-weight: normal;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.room-period {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  letter-spacing: 0.03em;
+  margin-bottom: var(--space-5);
+}
+
+.room-thesis {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  color: var(--color-text-secondary);
+  max-width: 56ch;
+  font-style: italic;
+}
+
+/* 3D scene mount — wraps both the 2D placeholder and the Three.js canvas */
+
+.room-3d-mount {
+  margin-bottom: var(--space-12);
+}
+
+/* 2D placeholder (visible by default, hidden in 3D mode) */
+
+.exhibit-3d-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 20rem;
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-surface);
+}
+
+/* Three.js canvas (hidden by default, shown in 3D mode) */
+
+.room-3d-canvas {
+  display: none;
+  width: 100%;
+  height: 20rem;
+}
+
+body.mode-3d .exhibit-3d-placeholder { display: none; }
+body.mode-3d .room-3d-canvas         { display: block; }
+
+.placeholder-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.placeholder-note {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-3);
+}
+
+.placeholder-caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  max-width: 48ch;
+  padding: 0 var(--space-6);
+  margin-top: var(--space-2);
+  line-height: var(--leading-normal);
+}
+
+/* ─── Exhibit grid ────────────────────────────────────────────────────────── */
+
+.exhibit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  margin-bottom: var(--space-16);
+}
+
+@media (max-width: 52rem) {
+  .exhibit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 52rem) and (max-width: 72rem) {
+  .exhibit-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Exhibit cards */
+
+.exhibit-card {
+  border: 1px solid var(--color-border);
+  padding: var(--space-8) var(--space-6);
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color 0.15s;
+}
+
+.exhibit-card:hover {
+  border-color: var(--room-accent);
+}
+
+.exhibit-tagline {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--room-accent);
+}
+
+.exhibit-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: normal;
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+}
+
+.exhibit-disputed {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.exhibit-summary {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+  margin-top: auto;
+}
+
+/* ─── Through-line strip ──────────────────────────────────────────────────── */
+
+.through-line {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-10);
+}
+
+.through-line-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+}
+
+.through-line-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.through-line-item {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.through-line-item--active {
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--room-accent);
+}
+
+.through-line-arrow {
+  color: var(--color-border-strong);
+  font-size: var(--text-sm);
+}
+
+/* ─── Exhibit card interactivity ──────────────────────────────────────────── */
+
+.exhibit-card[data-exhibit-id] {
+  cursor: pointer;
+}
+
+.exhibit-card[data-exhibit-id]:focus-visible {
+  outline: 2px solid var(--room-accent);
+  outline-offset: 2px;
+}
+
+/* ─── Exhibit detail dialog ────────────────────────────────────────────────── */
+
+#exhibit-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(40rem, calc(100vw - var(--space-8)));
+  max-height: calc(100dvh - var(--space-16));
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-bg);
+  padding: 0;
+  overflow: hidden;
+}
+
+#exhibit-dialog::backdrop {
+  background-color: rgba(28, 26, 22, 0.55);
+}
+
+.dialog-inner {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--space-16));
+  overflow-y: auto;
+  padding: var(--space-10);
+  position: relative;
+}
+
+.dialog-close {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  padding: var(--space-1) var(--space-3);
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.dialog-close:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.dialog-close:focus-visible {
+  outline: 2px solid var(--room-accent);
+  outline-offset: 2px;
+}
+
+.dialog-header {
+  padding-right: var(--space-10);
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-tagline {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--room-accent);
+  margin-bottom: var(--space-3);
+}
+
+.dialog-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: normal;
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+}
+
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.dialog-story {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+
+.dialog-key-idea {
+  font-family: var(--font-serif);
+  font-size: var(--text-lg);
+  font-style: italic;
+  line-height: var(--leading-snug);
+  color: var(--color-text-primary);
+  border-left: 3px solid var(--room-accent);
+  padding-left: var(--space-5);
+}
+
+.dialog-quote {
+  border: 1px solid var(--color-border);
+  padding: var(--space-5) var(--space-6);
+  background-color: var(--color-surface);
+}
+
+.dialog-quote-text {
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  font-style: italic;
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.dialog-quote-attribution {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+
+.dialog-disputed-tag {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  padding: var(--space-1) var(--space-3);
+}
+
+/* ─── Map placeholder ─────────────────────────────────────────────────────── */
+
+#map {
+  border-top: 1px solid var(--color-border);
+}
+
+.map-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-20) var(--section-pad-x) var(--space-24);
+}
+
+#map h2 {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: normal;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.map-subtitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+  margin-bottom: var(--space-10);
+}
+
+.map-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 28rem;
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-surface);
+}
+
+/* Rendered concept map — replaces the placeholder */
+.map-canvas-rendered svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.map-node-era {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.map-node-name {
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--color-text-secondary);
+  text-anchor: middle;
+}
+
+.map-edge-label {
+  font-family: var(--font-sans);
+  font-size: 0.5625rem;
+  letter-spacing: 0.04em;
+  fill: var(--color-text-muted);
+  text-anchor: middle;
+}
+
+.map-edge-label--cross {
+  font-style: italic;
+  fill: #B8B3A8;
+}

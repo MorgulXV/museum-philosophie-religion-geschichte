@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Museum — Philosophie, Religion &amp; Geschichte</title>
+  <link rel="stylesheet" href="css/museum.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <nav id="site-nav" aria-label="Museum Navigation">
+    <div class="nav-logo">Museum</div>
+    <div class="strand-legend" aria-label="Strang-Legende">
+      <span class="strand-dot philosophie" aria-hidden="true">●</span><span>Philosophie</span>
+      <span class="strand-dot religion" aria-hidden="true">●</span><span>Religion</span>
+      <span class="strand-dot geschichte" aria-hidden="true">●</span><span>Geschichte</span>
+    </div>
+    <div class="nav-actions">
+      <button id="tour-btn" class="btn-ghost">Rundgang starten</button>
+      <a href="museum3d.html" class="btn-primary" id="btn-3d">3D ansehen</a>
+    </div>
+  </nav>
+
+  <div id="throughline" role="navigation" aria-label="Raum-Navigation">
+    <!-- Wird von render.js befüllt -->
+  </div>
+
+  <div id="strand-filter" role="group" aria-label="Strang-Filter">
+    <button class="filter-btn active" data-strand="alle">Alle</button>
+    <button class="filter-btn" data-strand="philosophie">Philosophie</button>
+    <button class="filter-btn" data-strand="religion">Religion</button>
+    <button class="filter-btn" data-strand="geschichte">Geschichte</button>
+  </div>
+
+  <main id="main-content">
+    <section id="lobby" aria-label="Eingang">
+      <!-- Wird von render.js befüllt -->
+    </section>
+    <!-- Raum-Sections werden von render.js eingefügt -->
+  </main>
+
+  <section id="influence-map" aria-label="Einflussgraph">
+    <h2>Einflusslinien</h2>
+    <p class="graph-hint">Hover: Verbindungen hervorheben · Klick: Exponat öffnen · Scroll: Zoom · Ziehen: Verschieben</p>
+    <canvas id="graph-canvas" aria-label="Gerichteter Einflussgraph aller 39 Exponate"></canvas>
+  </section>
+
+  <div id="panel-overlay" aria-hidden="true"></div>
+  <aside id="exhibit-panel" role="dialog" aria-modal="true" aria-label="Exponat-Details" hidden>
+    <button id="panel-close" aria-label="Panel schließen">✕</button>
+    <div id="panel-content">
+    </div>
+  </aside>
+
+  <div id="tour-bar" hidden aria-label="Rundgang-Fortschritt">
+    <div id="tour-progress-track" aria-hidden="true">
+      <div id="tour-progress"></div>
+    </div>
+    <span id="tour-label"></span>
+    <button id="tour-next">Weiter →</button>
+    <button id="tour-stop">Beenden</button>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-quote">Das Gespräch geht weiter.</p>
+    <div class="footer-legend">
+      <span><span class="strand-dot philosophie">●</span> Philosophie — 18 Exponate</span>
+      <span><span class="strand-dot religion">●</span> Religion — 7 Exponate</span>
+      <span><span class="strand-dot geschichte">●</span> Geschichte — 14 Exponate</span>
+    </div>
+    <p class="footer-copy">39 Exponate · 5 Räume · 73 Einflusskanten · ca. 530 v. Chr. – 2009 n. Chr.</p>
+  </footer>
+
+  <script type="module" src="js/render.js"></script>
+  <script type="module" src="js/panel.js"></script>
+  <script type="module" src="js/graph.js"></script>
+  <script type="module" src="js/tour.js"></script>
+</body>
+</html>
