@@ -86,14 +86,22 @@ controls.addEventListener('unlock', () => {
 const origActivate = interaction._activate.bind(interaction);
 interaction._activate = (id) => { suppressOverlay = true; origActivate(id); };
 
-// Panel close → re-enter museum without overlay step.
-// Called directly from click/keydown (user-gesture context) so requestPointerLock is allowed.
-function reenterMuseum() { controls.lock(); }
+// Panel close → hide overlay so canvas is visible; cursor stays free.
+// User clicks the canvas when ready to re-enter first-person mode.
+function reenterMuseum() {
+  enterOverlay.style.display = 'none';
+  markDirty();
+}
 
 document.getElementById('panel-close').addEventListener('click', reenterMuseum);
 document.getElementById('panel-overlay').addEventListener('click', reenterMuseum);
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && !panelEl.hasAttribute('hidden')) reenterMuseum();
+});
+
+// Click anywhere on the canvas (cursor free) → re-enter pointer lock
+canvas.addEventListener('click', () => {
+  if (!controls.isLocked) controls.lock();
 });
 
 new MutationObserver(() => {
