@@ -1,5 +1,6 @@
 // js/3d/GalleryScene.js — Museum geometry: floor, walls, ceiling, trim, benches
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
   ROOM_W, ROOM_D, ROOM_H, ROOM_COUNT, TOTAL_D,
   DOOR_W, DOOR_H, ROOM_TINTS,
@@ -11,9 +12,9 @@ import {
   fixtureMat, fixtureHousingMat,
 } from './Materials.js';
 
-const DADO_H    = 1.20;   // dado rail top height
-const DADO_RAIL = 0.10;   // rail cap thickness
-const CORNICE   = 0.14;   // cornice depth at top of wall
+const DADO_H    = 1.20;
+const DADO_RAIL = 0.10;
+const CORNICE   = 0.14;
 
 // ── Mesh helpers ───────────────────────────────────────────────────────────────
 function mesh(geo, mat, castShadow = false, receiveShadow = false) {
@@ -23,31 +24,44 @@ function mesh(geo, mat, castShadow = false, receiveShadow = false) {
   return m;
 }
 
-function box(scene, w, h, d, x, y, z, mat, cs = false, rs = false) {
-  const m = mesh(new THREE.BoxGeometry(w, h, d), mat, cs, rs);
-  m.position.set(x, y, z);
+// Bake any geometry to world-space. applyMatrix4 transforms positions/normals only —
+// UVs stay in local [0,1]; texture.repeat on the material handles tiling.
+function bakedGeo(geo, wx, wy, wz, rotX = 0, rotY = 0, rotZ = 0) {
+  const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotX, rotY, rotZ));
+  geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(wx, wy, wz), quat, new THREE.Vector3(1, 1, 1)));
+  return geo;
+}
+
+function bakedBox(w, h, d, wx, wy, wz, rotY = 0) {
+  return bakedGeo(new THREE.BoxGeometry(w, h, d), wx, wy, wz, 0, rotY, 0);
+}
+
+// Merge an array of pre-baked geometries into a single Mesh and add to scene.
+function addMerged(scene, geos, mat, castShadow = false, receiveShadow = false) {
+  const merged = mergeGeometries(geos, false);
+  if (!merged) return;
+  const m = new THREE.Mesh(merged, mat);
+  m.castShadow    = castShadow;
+  m.receiveShadow = receiveShadow;
   scene.add(m);
-  return m;
 }
 
 // ── Floor ─────────────────────────────────────────────────────────────────────
 function buildFloor(scene, tex) {
   const { col, nrm, rgh, disp } = tex.marble;
-  const setRep = (t, u, v) => { t.repeat.set(u, v); return t; };
-  // Tiles ~2.5 m wide across 20 m floor
   [col, nrm, rgh, disp].forEach(t => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(6, 36);  // slightly larger tiles on dark stone
+    t.repeat.set(6, 36);
   });
   const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x948f88,  // dark charcoal-stone tint — real gallery floors are dark (MoMA, Getty)
+    color: 0x948f88,
     map: col, normalMap: nrm, roughnessMap: rgh,
     displacementMap: disp, displacementScale: 0.010,
     roughness: 0.96, metalness: 0.0, side: THREE.DoubleSide,
-    envMapIntensity: 0,  // suppress IBL on floor — RoomEnv overhead causes GGX blob at grazing angles
+    envMapIntensity: 0,
   });
-  const geo  = new THREE.PlaneGeometry(ROOM_W, TOTAL_D, 40, 240);
-  const f    = mesh(geo, floorMat, false, true);
+  const geo = new THREE.PlaneGeometry(ROOM_W, TOTAL_D, 8, 48);  // 768 tris vs 19 200 — displacement is 0.01 m, imperceptible at higher density
+  const f   = mesh(geo, floorMat, false, true);
   f.rotation.x = -Math.PI / 2;
   f.position.set(0, 0, TOTAL_D / 2);
   scene.add(f);
@@ -62,10 +76,12 @@ function buildCeiling(scene, tex) {
   c.position.set(0, ROOM_H, TOTAL_D / 2);
   scene.add(c);
 
-  // Coffered ceiling — shallow recessed panels per room
-  const COFFER_W = (ROOM_W - 2) / 3;   // 3 columns
-  const COFFER_D = (ROOM_D - 2) / 3;   // 3 rows per room
+  // Coffered ceiling — 225 individual meshes → 3 InstancedMesh (1 draw call each)
+  const COFFER_W     = (ROOM_W - 2) / 3;
+  const COFFER_D     = (ROOM_D - 2) / 3;
   const COFFER_DEPTH = 0.12;
+  const NCOFFERS     = ROOM_COUNT * 9;  // 45
+
   const cofferMat = new THREE.MeshStandardMaterial({
     color: 0xd2cfc8, roughness: 0.96, metalness: 0, side: THREE.DoubleSide,
   });
@@ -73,36 +89,65 @@ function buildCeiling(scene, tex) {
     color: 0xdedad3, roughness: 0.88, metalness: 0,
   });
 
+  const panelInst = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(COFFER_W - 0.20, COFFER_D - 0.20), cofferMat,    NCOFFERS);
+  const wRibInst  = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.20, COFFER_DEPTH, COFFER_D - 0.20), cofferRimMat, NCOFFERS * 2);
+  const nRibInst  = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(COFFER_W - 0.20, COFFER_DEPTH, 0.20), cofferRimMat, NCOFFERS * 2);
+
+  const _m4    = new THREE.Matrix4();
+  const _pos   = new THREE.Vector3();
+  const _scl   = new THREE.Vector3(1, 1, 1);
+  const _qFlat = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+  const _qId   = new THREE.Quaternion();
+  let pi = 0, wi = 0, ni = 0;
+
   for (let ri = 0; ri < ROOM_COUNT; ri++) {
     const roomZ = ROOM_D * ri + 1;
     for (let col = 0; col < 3; col++) {
       for (let row = 0; row < 3; row++) {
-        const cx = -ROOM_W / 2 + 1 + COFFER_W * (col + 0.5);
-        const cz =  roomZ + COFFER_D * (row + 0.5);
-        // Recessed panel
-        const panel = mesh(new THREE.PlaneGeometry(COFFER_W - 0.2, COFFER_D - 0.2), cofferMat);
-        panel.rotation.x = Math.PI / 2;
-        panel.position.set(cx, ROOM_H - COFFER_DEPTH, cz);
-        scene.add(panel);
-        // Rib strips forming coffer walls (connect ceiling plane to recessed panel)
-        // BoxGeometry(X-width, Y-height=COFFER_DEPTH, Z-length)
-        const rib = (wx, wz, rx, ry, rz) => {
-          const r = mesh(new THREE.BoxGeometry(wx, COFFER_DEPTH, wz), cofferRimMat, false, false);
-          r.position.set(rx, ry, rz);
-          scene.add(r);
-        };
-        const halfW = COFFER_W / 2, halfD = COFFER_D / 2;
+        const cx    = -ROOM_W / 2 + 1 + COFFER_W * (col + 0.5);
+        const cz    = roomZ + COFFER_D * (row + 0.5);
         const ribY  = ROOM_H - COFFER_DEPTH / 2;
-        rib(0.20, COFFER_D - 0.20, cx - halfW + 0.10, ribY, cz);  // W rib
-        rib(0.20, COFFER_D - 0.20, cx + halfW - 0.10, ribY, cz);  // E rib
-        rib(COFFER_W - 0.20, 0.20, cx, ribY, cz - halfD + 0.10);   // N rib
-        rib(COFFER_W - 0.20, 0.20, cx, ribY, cz + halfD - 0.10);   // S rib
+        const halfW = COFFER_W / 2, halfD = COFFER_D / 2;
+
+        _pos.set(cx, ROOM_H - COFFER_DEPTH, cz); _m4.compose(_pos, _qFlat, _scl); panelInst.setMatrixAt(pi++, _m4);
+        _pos.set(cx - halfW + 0.10, ribY, cz);   _m4.compose(_pos, _qId,   _scl); wRibInst.setMatrixAt(wi++, _m4);
+        _pos.set(cx + halfW - 0.10, ribY, cz);   _m4.compose(_pos, _qId,   _scl); wRibInst.setMatrixAt(wi++, _m4);
+        _pos.set(cx, ribY, cz - halfD + 0.10);   _m4.compose(_pos, _qId,   _scl); nRibInst.setMatrixAt(ni++, _m4);
+        _pos.set(cx, ribY, cz + halfD - 0.10);   _m4.compose(_pos, _qId,   _scl); nRibInst.setMatrixAt(ni++, _m4);
       }
     }
+  }
 
-    // Room-colour accent strip flush with ceiling (hidden by coffers; only peeking through)
-    const rz   = ROOM_D * ri + ROOM_D / 2;
-    const col  = new THREE.Color(ROOM_TINTS[ri]).multiplyScalar(0.55);
+  panelInst.instanceMatrix.needsUpdate = true;
+  wRibInst.instanceMatrix.needsUpdate  = true;
+  nRibInst.instanceMatrix.needsUpdate  = true;
+  scene.add(panelInst);
+  scene.add(wRibInst);
+  scene.add(nRibInst);
+
+  // Fixture discs + housings — 5 rooms → 2 InstancedMesh (was 10 individual meshes)
+  const discInst    = new THREE.InstancedMesh(new THREE.CircleGeometry(0.30, 16), fixtureMat, ROOM_COUNT);
+  const housingInst = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.36, 0.36, 0.10, 16, 1, true), fixtureHousingMat, ROOM_COUNT);
+  housingInst.castShadow = true;
+
+  for (let ri = 0; ri < ROOM_COUNT; ri++) {
+    const rz = ROOM_D * ri + ROOM_D / 2;
+    _pos.set(0, ROOM_H - 0.04, rz); _m4.compose(_pos, _qFlat, _scl); discInst.setMatrixAt(ri, _m4);
+    _pos.set(0, ROOM_H - 0.05, rz); _m4.compose(_pos, _qId,   _scl); housingInst.setMatrixAt(ri, _m4);
+  }
+  discInst.instanceMatrix.needsUpdate    = true;
+  housingInst.instanceMatrix.needsUpdate = true;
+  scene.add(discInst);
+  scene.add(housingInst);
+
+  // Per-room colour accent strips — different material per room, can't instance
+  for (let ri = 0; ri < ROOM_COUNT; ri++) {
+    const rz  = ROOM_D * ri + ROOM_D / 2;
+    const col = new THREE.Color(ROOM_TINTS[ri]).multiplyScalar(0.55);
     const accent = mesh(
       new THREE.PlaneGeometry(ROOM_W - 1, ROOM_D - 2),
       new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide })
@@ -110,199 +155,164 @@ function buildCeiling(scene, tex) {
     accent.rotation.x = Math.PI / 2;
     accent.position.set(0, ROOM_H - 0.005, rz);
     scene.add(accent);
-
-    // Ceiling fixture disc + housing per room
-    const disc = mesh(new THREE.CircleGeometry(0.30, 16), fixtureMat);
-    disc.rotation.x = Math.PI / 2;
-    disc.position.set(0, ROOM_H - 0.04, rz);
-    scene.add(disc);
-    const housing = mesh(
-      new THREE.CylinderGeometry(0.36, 0.36, 0.10, 16, 1, true),
-      fixtureHousingMat, true, false
-    );
-    housing.position.set(0, ROOM_H - 0.05, rz);
-    scene.add(housing);
   }
 }
 
-// ── Wall section helper ────────────────────────────────────────────────────────
-// Builds a wall with dado panel, dado rail cap, cornice, and optional DoubleSide
-function wallSection(scene, tex, W, Htotal, depth, x, z, rotY, uScale) {
-  const upperH  = Htotal - DADO_H - DADO_RAIL;
-  const upperY  = DADO_H + DADO_RAIL + upperH / 2;
-  const dadoY   = DADO_H / 2;
-  const railY   = DADO_H + DADO_RAIL / 2;
-  const corY    = Htotal - CORNICE / 2;
-
-  const vUpper  = Math.ceil(upperH / 2);     // ~1 tile per 2 m vertically
-  const vDado   = 1;
-
-  // Geometry convention: BoxGeometry(thickness, height, length)
-  // Walls run along Z by default; end walls get rotY=π/2 to run along X.
-
-  // Upper wall
-  const up = mesh(
-    new THREE.BoxGeometry(depth, upperH, W),
-    wallUpperMat(tex, Math.ceil(W / 2) * uScale, vUpper),
-    true, true
-  );
-  up.rotation.y = rotY;
-  up.position.set(x, upperY, z);
-  scene.add(up);
-
-  // Dado (lower) panel
-  const dp = mesh(
-    new THREE.BoxGeometry(depth, DADO_H, W),
-    wallDadoMat(tex, Math.ceil(W / 2) * uScale, vDado),
-    true, true
-  );
-  dp.rotation.y = rotY;
-  dp.position.set(x, dadoY, z);
-  scene.add(dp);
-
-  // Dado rail cap
-  const rail = mesh(
-    new THREE.BoxGeometry(depth + 0.04, DADO_RAIL, W + 0.02),
-    dadoRailCapMat, true, false
-  );
-  rail.rotation.y = rotY;
-  rail.position.set(x, railY, z);
-  scene.add(rail);
-
-  // Cornice strip
-  const corn = mesh(
-    new THREE.BoxGeometry(depth + 0.04, CORNICE, W + 0.02),
-    corniceMat, true, false
-  );
-  corn.rotation.y = rotY;
-  corn.position.set(x, corY, z);
-  scene.add(corn);
+// ── Wall section — returns world-baked geometries for caller to merge ──────────
+// Replaces the old per-mesh wallSection that added 4 Meshes directly to scene.
+function wallSectionGeos(W, Htotal, depth, x, z, rotY) {
+  const upperH = Htotal - DADO_H - DADO_RAIL;
+  const upperY = DADO_H + DADO_RAIL + upperH / 2;
+  const dadoY  = DADO_H / 2;
+  const railY  = DADO_H + DADO_RAIL / 2;
+  const corY   = Htotal - CORNICE / 2;
+  return {
+    upper:   bakedBox(depth,        upperH,      W,        x, upperY, z, rotY),
+    dado:    bakedBox(depth,        DADO_H,      W,        x, dadoY,  z, rotY),
+    rail:    bakedBox(depth + 0.04, DADO_RAIL,   W + 0.02, x, railY,  z, rotY),
+    cornice: bakedBox(depth + 0.04, CORNICE,     W + 0.02, x, corY,   z, rotY),
+  };
 }
 
 // ── Side walls ─────────────────────────────────────────────────────────────────
 function buildSideWalls(scene, tex) {
-  const HW = ROOM_W / 2;
-  // Long outer side walls (20 m width × TOTAL_D length box geometry, seen from inside)
-  // We build them as a column per room so texture tiling matches
+  const HW     = ROOM_W / 2;
+  const upperH = ROOM_H - DADO_H - DADO_RAIL;
+  // All 10 side wall sections share identical UV repeat — build shared materials once
+  const upperMat = wallUpperMat(tex, Math.ceil(ROOM_D / 2), Math.ceil(upperH / 2));
+  const dadoMat  = wallDadoMat(tex,  Math.ceil(ROOM_D / 2), 1);
+
+  // All 10 side wall sections share one material — collect all, merge globally → 4 draw calls total
+  const upperGs = [], dadoGs = [], railGs = [], cornGs = [];
   for (let ri = 0; ri < ROOM_COUNT; ri++) {
     const rz = ROOM_D * ri + ROOM_D / 2;
-    wallSection(scene, tex, ROOM_D, ROOM_H, 0.30, -HW, rz, 0,      1);  // left
-    wallSection(scene, tex, ROOM_D, ROOM_H, 0.30,  HW, rz, Math.PI, 1);  // right
+    const L  = wallSectionGeos(ROOM_D, ROOM_H, 0.30, -HW, rz, 0);
+    const R  = wallSectionGeos(ROOM_D, ROOM_H, 0.30,  HW, rz, Math.PI);
+    upperGs.push(L.upper, R.upper);
+    dadoGs.push(L.dado,   R.dado);
+    railGs.push(L.rail,   R.rail);
+    cornGs.push(L.cornice, R.cornice);
   }
+  addMerged(scene, upperGs, upperMat,       true, true);
+  addMerged(scene, dadoGs,  dadoMat,        true, true);
+  addMerged(scene, railGs,  dadoRailCapMat, true, false);
+  addMerged(scene, cornGs,  corniceMat,     true, false);
 }
 
 // ── End walls ─────────────────────────────────────────────────────────────────
 function buildEndWalls(scene, tex) {
-  wallSection(scene, tex, ROOM_W, ROOM_H, 0.30, 0, 0,       Math.PI / 2, 1);
-  wallSection(scene, tex, ROOM_W, ROOM_H, 0.30, 0, TOTAL_D, Math.PI / 2, 1);
+  const upperH   = ROOM_H - DADO_H - DADO_RAIL;
+  const upperMat = wallUpperMat(tex, Math.ceil(ROOM_W / 2), Math.ceil(upperH / 2));
+  const dadoMat  = wallDadoMat(tex,  Math.ceil(ROOM_W / 2), 1);
+  const A = wallSectionGeos(ROOM_W, ROOM_H, 0.30, 0, 0,       Math.PI / 2);
+  const B = wallSectionGeos(ROOM_W, ROOM_H, 0.30, 0, TOTAL_D, Math.PI / 2);
+  // Front + back merged per type — 4 draw calls (was 8)
+  addMerged(scene, [A.upper,   B.upper  ], upperMat,       true, true);
+  addMerged(scene, [A.dado,    B.dado   ], dadoMat,        true, true);
+  addMerged(scene, [A.rail,    B.rail   ], dadoRailCapMat, true, false);
+  addMerged(scene, [A.cornice, B.cornice], corniceMat,     true, false);
 }
 
 // ── Dividing walls with doorways ───────────────────────────────────────────────
 function buildDividingWalls(scene, tex) {
-  const segW   = (ROOM_W - DOOR_W) / 2;
-  const topH   = ROOM_H - DOOR_H;
-  const topCy  = DOOR_H + topH / 2;
+  const segW    = (ROOM_W - DOOR_W) / 2;
+  const topH    = ROOM_H - DOOR_H;
+  const topCy   = DOOR_H + topH / 2;
   const leftCx  = -(ROOM_W / 2) + segW / 2;
   const rightCx =  (ROOM_W / 2) - segW / 2;
+
+  const moldingGeos = [];  // all 12 door moldings → 1 merged mesh
 
   for (let i = 1; i < ROOM_COUNT; i++) {
     const wz   = ROOM_D * i;
     const tint = new THREE.Color(0xf0ede6).lerp(new THREE.Color(ROOM_TINTS[i]), 0.12);
     const hex  = parseInt(tint.getHexString(), 16);
 
-    // Left and right segments (full height panels alongside doorway)
-    const segMat  = wallUpperMat(tex, Math.ceil(segW / 2), Math.ceil(ROOM_H / 2));
+    // Segments: left+right share the same per-divider tinted material → merge into 1 draw call
+    const segMat = wallUpperMat(tex, Math.ceil(segW / 2), Math.ceil(ROOM_H / 2));
     segMat.color.set(hex);
-    for (const cx of [leftCx, rightCx]) {
-      const s = mesh(new THREE.BoxGeometry(segW, ROOM_H, 0.30), segMat, true, true);
-      s.position.set(cx, ROOM_H / 2, wz);
-      scene.add(s);
-    }
+    addMerged(scene, [
+      bakedBox(segW, ROOM_H, 0.30, leftCx,  ROOM_H / 2, wz),
+      bakedBox(segW, ROOM_H, 0.30, rightCx, ROOM_H / 2, wz),
+    ], segMat, true, true);
 
-    // Transom above door
+    // Transom: unique per-room tint, stays individual
     const transomMat = wallUpperMat(tex, Math.ceil(DOOR_W / 2), 1);
     transomMat.color.set(hex);
     const t = mesh(new THREE.BoxGeometry(DOOR_W, topH, 0.30), transomMat, true, true);
     t.position.set(0, topCy, wz);
     scene.add(t);
 
-    // Door frame moldings
-    const mT = (w, h, d, ox, oy) => {
-      const m = mesh(new THREE.BoxGeometry(w, h, d), doorMoldingMat, true, false);
-      m.position.set(ox, oy, wz);
-      scene.add(m);
-    };
-    // Left jamb, right jamb, lintel
-    mT(0.12, DOOR_H, 0.36,  -(DOOR_W / 2 + 0.06), DOOR_H / 2);
-    mT(0.12, DOOR_H, 0.36,   (DOOR_W / 2 + 0.06), DOOR_H / 2);
-    mT(DOOR_W + 0.24, 0.12, 0.36, 0, DOOR_H + 0.06);
+    // Collect molding geometries for a single global merged mesh
+    moldingGeos.push(bakedBox(0.12,          DOOR_H, 0.36, -(DOOR_W / 2 + 0.06), DOOR_H / 2,    wz));
+    moldingGeos.push(bakedBox(0.12,          DOOR_H, 0.36,  (DOOR_W / 2 + 0.06), DOOR_H / 2,    wz));
+    moldingGeos.push(bakedBox(DOOR_W + 0.24, 0.12,   0.36,  0,                    DOOR_H + 0.06, wz));
   }
+
+  addMerged(scene, moldingGeos, doorMoldingMat, true, false);  // 12 → 1
 }
 
 // ── Baseboard ──────────────────────────────────────────────────────────────────
 function buildBaseboard(scene) {
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xb4b0a8, roughness: 0.65, metalness: 0.06,
-  });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xb4b0a8, roughness: 0.65, metalness: 0.06 });
   const H = 0.12, D = 0.06;
   const HW = ROOM_W / 2 - D / 2;
-  // Side baseboards
-  const bl = mesh(new THREE.BoxGeometry(D, H, TOTAL_D), mat, false, true);
-  bl.position.set(-HW, H / 2, TOTAL_D / 2);
-  scene.add(bl);
-  const br = mesh(new THREE.BoxGeometry(D, H, TOTAL_D), mat, false, true);
-  br.position.set( HW, H / 2, TOTAL_D / 2);
-  scene.add(br);
+  addMerged(scene, [
+    bakedBox(D, H, TOTAL_D, -HW, H / 2, TOTAL_D / 2),
+    bakedBox(D, H, TOTAL_D,  HW, H / 2, TOTAL_D / 2),
+  ], mat, false, true);
 }
 
 // ── Gallery benches ────────────────────────────────────────────────────────────
 function buildBenches(scene, tex) {
+  // 60 individual meshes → 3 InstancedMesh (1 draw call each)
   const seatMat = benchSeatMat(tex);
-  const legGeo  = new THREE.CylinderGeometry(0.028, 0.028, 0.41, 8);
   const SEAT_Y  = 0.44;
-  const BENCH_X = 5.0;  // between plinths (±2) and wall (±10)
+  const BENCH_X = 5.0;
+  const NBENCH  = ROOM_COUNT * 2;
+
+  const seatInst  = new THREE.InstancedMesh(new THREE.BoxGeometry(1.50, 0.06, 0.40), seatMat,     NBENCH);
+  const braceInst = new THREE.InstancedMesh(new THREE.BoxGeometry(1.30, 0.04, 0.06), benchLegMat, NBENCH);
+  const legInst   = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.028, 0.028, 0.41, 8), benchLegMat, NBENCH * 4);
+  seatInst.receiveShadow = true;
+  legInst.castShadow     = true;
+
+  const _m4  = new THREE.Matrix4();
+  const _pos = new THREE.Vector3();
+  const _scl = new THREE.Vector3(1, 1, 1);
+  const _q   = new THREE.Quaternion();
+  let si = 0, bi = 0, li = 0;
 
   for (let ri = 0; ri < ROOM_COUNT; ri++) {
     const bz = ROOM_D * ri + ROOM_D / 2;
     for (const bx of [-BENCH_X, BENCH_X]) {
-      const grp = new THREE.Group();
-      grp.position.set(bx, 0, bz);
-      // Seat plank
-      const seat = mesh(new THREE.BoxGeometry(1.50, 0.06, 0.40), seatMat, true, true);
-      seat.position.y = SEAT_Y + 0.03;
-      grp.add(seat);
-      // Leg cross-brace
-      const brace = mesh(new THREE.BoxGeometry(1.30, 0.04, 0.06), benchLegMat, true, false);
-      brace.position.y = SEAT_Y - 0.20;
-      grp.add(brace);
-      // 4 legs
-      [[-0.64, -0.15], [-0.64, 0.15], [0.64, -0.15], [0.64, 0.15]].forEach(([lx, lz]) => {
-        const leg = mesh(legGeo, benchLegMat, true, false);
-        leg.position.set(lx, SEAT_Y / 2 - 0.02, lz);
-        grp.add(leg);
-      });
-      scene.add(grp);
+      _pos.set(bx, SEAT_Y + 0.03, bz); _m4.compose(_pos, _q, _scl); seatInst.setMatrixAt(si++, _m4);
+      _pos.set(bx, SEAT_Y - 0.20, bz); _m4.compose(_pos, _q, _scl); braceInst.setMatrixAt(bi++, _m4);
+      for (const [lx, lz] of [[-0.64, -0.15], [-0.64, 0.15], [0.64, -0.15], [0.64, 0.15]]) {
+        _pos.set(bx + lx, SEAT_Y / 2 - 0.02, bz + lz);
+        _m4.compose(_pos, _q, _scl);
+        legInst.setMatrixAt(li++, _m4);
+      }
     }
   }
+
+  seatInst.instanceMatrix.needsUpdate  = true;
+  braceInst.instanceMatrix.needsUpdate = true;
+  legInst.instanceMatrix.needsUpdate   = true;
+  scene.add(seatInst);
+  scene.add(braceInst);
+  scene.add(legInst);
 }
 
 // ── Entry area — information plinth ────────────────────────────────────────────
 function buildInfoStand(scene) {
   const standMat = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.45, metalness: 0.12 });
-  // Slim lectern at museum entry (room 1 near back)
-  const grp = new THREE.Group();
-  grp.position.set(0, 0, 3.5);
-  const pole = mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.05, 12), standMat, true, false);
-  pole.position.y = 0.525;
-  grp.add(pole);
-  const top = mesh(new THREE.BoxGeometry(0.55, 0.04, 0.40), standMat, true, true);
-  top.position.y = 1.07;
-  top.rotation.x = -0.18;
-  grp.add(top);
-  const base = mesh(new THREE.CylinderGeometry(0.20, 0.22, 0.06, 12), standMat, true, true);
-  base.position.y = 0.03;
-  grp.add(base);
-  scene.add(grp);
+  addMerged(scene, [
+    bakedGeo(new THREE.CylinderGeometry(0.04, 0.06, 1.05, 12), 0, 0.525, 3.5),
+    bakedGeo(new THREE.BoxGeometry(0.55, 0.04, 0.40),          0, 1.07,  3.5, -0.18),
+    bakedGeo(new THREE.CylinderGeometry(0.20, 0.22, 0.06, 12), 0, 0.03,  3.5),
+  ], standMat, true, true);
 }
 
 // ── Main export ────────────────────────────────────────────────────────────────

@@ -1,0 +1,22 @@
+node_modules/
+.DS_Store
+test-results/
+playwright-report/
+
+# Blender / Godot / ambientCG project sidecars — not needed for web
+textures/**/*.blend
+textures/**/*.usdc
+textures/**/*.tres
+textures/**/*.mtlx
+
+# Screenshots and planning docs
+screenshot_*.png
+*.pdf
+3D-Museum-Bauplan.md
+MUSEUM_MASTERPLAN.md
+Rework.md
+Stufe4_Gesamtplan.md
+looks.md
+realism.md
+museum-ship-plan.md
+museum.md

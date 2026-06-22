@@ -12,14 +12,15 @@ import { ROMAN, ROOM_D, ROOM_COUNT } from './Constants.js';
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
 const canvas   = document.getElementById('museum3d-canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled  = true;
-renderer.shadowMap.type     = THREE.PCFSoftShadowMap;
-renderer.toneMapping        = THREE.ACESFilmicToneMapping;  // applied by PBR shaders
-renderer.toneMappingExposure = 0.85;                         // compensates for reduced ambient/IBL
-renderer.outputColorSpace   = THREE.LinearSRGBColorSpace;   // intermediate buffers stay linear
+renderer.shadowMap.enabled     = true;
+renderer.shadowMap.type        = THREE.PCFShadowMap;  // 4 taps/fragment vs PCFSoft's 9
+renderer.shadowMap.autoUpdate  = false;  // shadows computed once per room change
+renderer.toneMapping        = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+renderer.outputColorSpace   = THREE.LinearSRGBColorSpace;
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
@@ -30,7 +31,7 @@ scene.fog        = new THREE.Fog(0x1a1816, 14, 65);
 const pmrem = new THREE.PMREMGenerator(renderer);
 const roomEnv = new RoomEnvironment();
 scene.environment = pmrem.fromScene(roomEnv, 0.04).texture;
-scene.environmentIntensity = 0;  // IBL off — RoomEnv overhead triggers bloom via metallic fixture even at 0.40; ambient+points carry fill
+scene.environmentIntensity = 0;
 pmrem.dispose();
 roomEnv.dispose();
 
@@ -72,13 +73,21 @@ function hideOverlay() {
   roomLabel.hidden = false;
 }
 
-controls.addEventListener('lock',   () => hideOverlay());
+// ── Render-on-demand ──────────────────────────────────────────────────────────
+// The scene has no animations — only render when something changes.
+// While pointer-locked (exploring), always render (camera moves every frame).
+// When the overlay/panel is shown, render once per event.
+let _dirty = true;
+function markDirty() { _dirty = true; }
+
+controls.addEventListener('lock',   () => { hideOverlay(); markDirty(); });
 controls.addEventListener('unlock', () => {
   if (!suppressOverlay) {
     showOverlay();
     enterBtn.textContent = 'Weiter →';
   }
   suppressOverlay = false;
+  markDirty();
 });
 
 const origActivate = interaction._activate.bind(interaction);
@@ -90,6 +99,7 @@ new MutationObserver(() => {
     showOverlay();
     enterBtn.textContent = 'Weiter →';
   }
+  markDirty();
 }).observe(panelEl, { attributes: true, attributeFilter: ['hidden'] });
 
 enterBtn.addEventListener('click', () => controls.lock());
@@ -102,22 +112,32 @@ function updateRoomLabel() {
   if (ri === lastRoomIdx) return;
   lastRoomIdx = ri;
   roomLabel.textContent = `Raum ${ROMAN[ri]} — ${rooms[ri]?.title ?? ''}`;
-  // Only enable shadow maps for the current room — keeps active shadow textures ≤ 10
-  // so total fragment texture units stay under Metal's limit (material maps + shadow maps ≤ 16).
   allSpotlights.forEach(({ spot, roomIdx }) => {
     spot.castShadow = roomIdx === ri;
   });
+  renderer.shadowMap.needsUpdate = true;
 }
+
+// ── First-frame shadow seed ────────────────────────────────────────────────────
+renderer.shadowMap.needsUpdate = true;
 
 // ── Render loop ───────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
+
+  // Always consume delta to prevent accumulated jumps after idle periods
   const dt = clock.getDelta();
+
+  // Render every frame while exploring (pointer locked); on events otherwise
+  if (controls.isLocked) _dirty = true;
+  if (!_dirty) return;
+  _dirty = false;
+
   controls.update(dt);
   interaction.update();
   updateRoomLabel();
-  pp.composer.render();   // replaces renderer.render(scene, camera)
+  pp.composer.render();
 }
 animate();
 
@@ -128,4 +148,5 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(W, H);
   resizeComposer(pp, W, H);
+  markDirty();
 });

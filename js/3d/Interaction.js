@@ -13,6 +13,8 @@ export class Interaction {
     this.controls      = fpControls;
     this.raycaster     = new THREE.Raycaster();
     this.raycaster.far = REACH;
+    this._center       = new THREE.Vector2(0, 0);
+    this._meshArray    = [...exhibitMeshes.values()].map(v => v.mesh);  // cached — map never mutates after init
     this.hoveredId     = null;
     this._lines        = [];
     this._hoverLabel   = document.getElementById('hover-label');
@@ -25,9 +27,8 @@ export class Interaction {
   }
 
   update() {
-    this.raycaster.setFromCamera({ x: 0, y: 0 }, this.camera);
-    const meshes = [...this.exhibitMeshes.values()].map(v => v.mesh);
-    const hits   = this.raycaster.intersectObjects(meshes, false);
+    this.raycaster.setFromCamera(this._center, this.camera);
+    const hits = this.raycaster.intersectObjects(this._meshArray, false);
 
     const newId = hits.length > 0 ? hits[0].object.userData.exhibitId : null;
 

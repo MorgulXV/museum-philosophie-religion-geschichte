@@ -1,0 +1,981 @@
+/* ═══════════════════════════════════════════════════════════════
+   Museum — Philosophie, Religion & Geschichte
+   Warm Museum Aesthetic — Pergamon / Alte Pinakothek Style
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Hintergründe ─────────────────────────────────────────────── */
+  --bg-base:        #faf9f7;
+  --bg-surface:     #fdfcfa;
+  --bg-panel:       #fbfaf8;
+  --bg-section:     #f2f0ec;
+  --bg-footer:      #f2f0ec;
+
+  /* ── Text ─────────────────────────────────────────────────────── */
+  --text-primary:   #1a1714;
+  --text-secondary: #57514b;
+  --text-muted:     #8a8178;
+  --text-dim:       #b3aca3;
+  --text-inverse:   #f4f0e6;
+
+  /* ── Akzent ───────────────────────────────────────────────────── */
+  --accent:         #6b5526;
+  --accent-light:   #c49a3c;
+  --accent-bg:      rgba(107, 85, 38, 0.08);
+
+  /* ── Grenzen ──────────────────────────────────────────────────── */
+  --border:         rgba(26, 23, 20, 0.09);
+  --border-medium:  rgba(26, 23, 20, 0.20);
+  --border-strong:  rgba(26, 23, 20, 0.35);
+  --rule:           #c8c0b4;
+
+  /* ── Raum-Akzentfarben ────────────────────────────────────────── */
+  --room-1:         #3b5a8c;
+  --room-2:         #2a5c42;
+  --room-3:         #8c4a15;
+  --room-4:         #6e1e2a;
+  --room-5:         #4a4035;
+
+  /* ── Strang-Farben ────────────────────────────────────────────── */
+  --philosophie:    #3f5775;
+  --religion:       #3a5a48;
+  --geschichte:     #6b5236;
+
+  /* ── Typografie ───────────────────────────────────────────────── */
+  --font-display:   'EB Garamond', 'Garamond', 'Georgia', serif;
+  --font-ui:        'Inter', system-ui, sans-serif;
+  --font-mono:      'DM Mono', 'Courier New', monospace;
+
+  /* ── Abstände ─────────────────────────────────────────────────── */
+  --space-xs:   0.25rem;
+  --space-sm:   0.625rem;
+  --space-md:   1.5rem;
+  --space-lg:   3rem;
+  --space-xl:   6rem;
+  --space-2xl:  9rem;
+
+  /* ── Radien ───────────────────────────────────────────────────── */
+  --radius-sm:  0;
+  --radius-md:  0;
+
+  /* ── Schatten ─────────────────────────────────────────────────── */
+  --shadow-card:  none;
+  --shadow-panel: -1px 0 30px rgba(26,23,20,0.06);
+
+  /* ── Übergänge ────────────────────────────────────────────────── */
+  --ease:     cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 220ms;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ── Base Typography ─────────────────────────────────────────────── */
+
+body {
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body.panel-open { overflow: hidden; }
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+h3 {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+blockquote {
+  font-style: italic;
+  font-size: 1.1em;
+  line-height: 1.65;
+}
+
+/* ── Navigation ──────────────────────────────────────────────────── */
+
+#site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border-medium);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.strand-legend {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  display: flex;
+  gap: 1.5rem;
+  color: var(--text-muted);
+  align-items: center;
+}
+
+.strand-dot { font-size: 0.9rem; margin-right: 0.3rem; }
+.strand-dot.philosophie { color: var(--philosophie); }
+.strand-dot.religion    { color: var(--religion); }
+.strand-dot.geschichte  { color: var(--geschichte); }
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  padding: 0.35rem 0.9rem;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--duration) var(--ease),
+              color var(--duration) var(--ease);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: none;
+  padding: 0.35rem 0.9rem;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background var(--duration) var(--ease);
+}
+
+.btn-primary:hover { background: var(--accent); }
+
+/* ── Throughline ─────────────────────────────────────────────────── */
+
+#throughline {
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+  display: flex;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+}
+
+.throughline-btn {
+  flex: 1;
+  padding: 0.5rem var(--space-md);
+  cursor: pointer;
+  border: none;
+  border-left: 3px solid transparent;
+  background: none;
+  text-align: left;
+  opacity: 0.4;
+  transition: opacity var(--duration) var(--ease),
+              background var(--duration) var(--ease),
+              border-color var(--duration) var(--ease);
+}
+
+.throughline-btn:first-child { border-left-width: 0; }
+
+.throughline-btn[data-room="1"] { border-left-color: var(--room-1); }
+.throughline-btn[data-room="2"] { border-left-color: var(--room-2); }
+.throughline-btn[data-room="3"] { border-left-color: var(--room-3); }
+.throughline-btn[data-room="4"] { border-left-color: var(--room-4); }
+.throughline-btn[data-room="5"] { border-left-color: var(--room-5); }
+
+.throughline-btn.active {
+  opacity: 1;
+  background: var(--bg-section);
+}
+
+.throughline-numeral {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-bottom: 1px;
+}
+
+.throughline-role {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.throughline-btn.active .throughline-role { color: var(--text-primary); }
+
+.throughline-dates {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-top: 1px;
+}
+
+/* ── Strand Filter ───────────────────────────────────────────────── */
+
+#strand-filter {
+  display: flex;
+  gap: 0.5rem;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-btn {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border-medium);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration) var(--ease);
+}
+
+.filter-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+.filter-btn.active {
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border-color: var(--text-primary);
+}
+
+.filter-btn[data-strand="philosophie"].active { background: var(--philosophie); border-color: var(--philosophie); }
+.filter-btn[data-strand="religion"].active    { background: var(--religion);    border-color: var(--religion); }
+.filter-btn[data-strand="geschichte"].active  { background: var(--geschichte);  border-color: var(--geschichte); }
+
+/* ── Strand filter card visibility ──────────────────────────────── */
+
+.exhibit-card {
+  transition: opacity var(--duration) var(--ease),
+              border-color var(--duration) var(--ease);
+}
+
+body[data-strand-filter="philosophie"] .exhibit-card[data-strand="religion"],
+body[data-strand-filter="philosophie"] .exhibit-card[data-strand="geschichte"] {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+body[data-strand-filter="religion"] .exhibit-card[data-strand="philosophie"],
+body[data-strand-filter="religion"] .exhibit-card[data-strand="geschichte"] {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+body[data-strand-filter="geschichte"] .exhibit-card[data-strand="philosophie"],
+body[data-strand-filter="geschichte"] .exhibit-card[data-strand="religion"] {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* ── Lobby ───────────────────────────────────────────────────────── */
+
+#lobby {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-lg);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.lobby-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.lobby-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+.lobby-thesis {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 580px;
+  line-height: 1.75;
+  margin-bottom: var(--space-xl);
+}
+
+/* Room nav — like a printed table of contents */
+.room-nav {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-medium);
+  max-width: 600px;
+}
+
+.room-nav-btn {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: 0.75rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  transition: padding-left var(--duration) var(--ease),
+              color var(--duration) var(--ease);
+}
+
+.room-nav-btn:hover { padding-left: var(--space-sm); color: var(--accent); }
+
+/* ── Room Sections ───────────────────────────────────────────────── */
+
+.room {
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+}
+
+.room-banner {
+  max-width: 1200px;
+  margin: 0 auto var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-medium);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+}
+
+.room-numeral {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 10vw, 9rem);
+  font-weight: 400;
+  line-height: 0.85;
+  color: #e8e4dc;
+  user-select: none;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.room-info { flex: 1; }
+
+.room-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.room-dates {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.room-role {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.room-thesis {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+.exhibits-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-lg);
+}
+
+/* ── Exhibit Cards ───────────────────────────────────────────────── */
+
+.exhibit-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.exhibit-card:hover {
+  border-color: var(--border-strong);
+}
+
+.exhibit-card:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card-body {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.strand-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 2px;
+}
+
+.strand-badge.strand-philosophie { color: var(--philosophie); background: transparent; }
+.strand-badge.strand-religion    { color: var(--religion);    background: transparent; }
+.strand-badge.strand-geschichte  { color: var(--geschichte);  background: transparent; }
+
+.card-date {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.card-text {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.card-tick {
+  display: block;
+  width: 18px;
+  margin-top: auto;
+}
+
+/* ── Influence Map ───────────────────────────────────────────────── */
+
+#influence-map {
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--bg-section);
+  border-top: 1px solid var(--border-medium);
+}
+
+#influence-map h2 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.graph-hint {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-bottom: var(--space-md);
+  letter-spacing: 0.03em;
+}
+
+#graph-canvas {
+  width: 100%;
+  height: 520px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-section);
+  display: block;
+  cursor: crosshair;
+}
+
+/* ── Panel Overlay ───────────────────────────────────────────────── */
+
+#panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 23, 20, 0.35);
+  z-index: 199;
+  display: none;
+}
+
+.overlay-open { display: block !important; }
+
+/* ── Exhibit Panel ───────────────────────────────────────────────── */
+
+#exhibit-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: min(520px, 100vw);
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-panel);
+  transform: translateX(100%);
+  transition: transform var(--duration) var(--ease);
+  overflow-y: auto;
+  z-index: 200;
+  padding: var(--space-lg);
+  overscroll-behavior: contain;
+}
+
+/* Always block-level so CSS transition works, even when [hidden] */
+#exhibit-panel[hidden] {
+  display: block !important;
+  transform: translateX(100%);
+}
+
+#exhibit-panel:not([hidden]) {
+  transform: translateX(0);
+}
+
+#panel-close {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration) var(--ease);
+  z-index: 1;
+}
+
+#panel-close:hover { border-color: var(--text-primary); color: var(--text-primary); }
+
+#panel-content { margin-top: var(--space-sm); }
+
+/* ── Panel internals ─────────────────────────────────────────────── */
+
+.panel-header {
+  margin-bottom: var(--space-lg);
+  padding-top: var(--space-sm);
+}
+
+.panel-strand-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.panel-strand-badge.strand-philosophie { color: var(--philosophie); background: transparent; }
+.panel-strand-badge.strand-religion    { color: var(--religion);    background: transparent; }
+.panel-strand-badge.strand-geschichte  { color: var(--geschichte);  background: transparent; }
+
+.panel-name {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin: 0.4rem 0 0.2rem;
+}
+
+.panel-date {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.panel-artefakt {
+  background: var(--bg-section);
+  border-left: 3px solid var(--rule);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.panel-artefakt h3 { margin-bottom: 0.35rem; }
+
+.artefakt-desc {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 0.3rem;
+}
+
+.artefakt-hint {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.panel-divider {
+  border: none;
+  border-top: 1px solid var(--border-medium);
+  margin: var(--space-md) 0;
+}
+
+.panel-section { margin-bottom: var(--space-md); }
+
+.panel-section h3,
+.panel-keyidea h3,
+.panel-influences h3,
+.panel-influenced-by h3 {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.panel-section p {
+  font-family: var(--font-display);
+  font-size: 0.97rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.panel-keyidea {
+  padding-left: var(--space-md);
+  margin-bottom: var(--space-md);
+  /* border-left-color comes from JS inline style: style="border-left: 3px solid var(--STRANG)" */
+}
+
+.panel-keyidea p {
+  font-family: var(--font-display);
+  font-size: 0.97rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+
+.panel-quote {
+  border-left: 2px solid var(--rule);
+  padding-left: var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.panel-quote p {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+}
+
+.panel-quote cite {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.4rem;
+}
+
+.panel-disputed {
+  display: flex;
+  gap: var(--space-sm);
+  background: rgba(125, 90, 30, 0.06);
+  border: 1px solid rgba(125, 90, 30, 0.2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-md) 0;
+}
+
+.disputed-icon { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+
+.panel-disputed p {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.panel-influences,
+.panel-influenced-by { margin-top: var(--space-md); }
+
+.influence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.influence-chip {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+}
+
+.influence-chip:hover {
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border-color: var(--text-primary);
+}
+
+/* ── Tour Bar ────────────────────────────────────────────────────── */
+
+#tour-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0.75rem var(--space-lg);
+  z-index: 210;
+  border-top: 1px solid var(--border-medium);
+}
+
+#tour-bar[hidden] { display: none; }
+
+#tour-progress-track {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+#tour-progress {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  width: 0%;
+  transition: width 300ms var(--ease);
+}
+
+#tour-label {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+#tour-next, #tour-stop {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  background: none;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+  white-space: nowrap;
+}
+
+#tour-next:hover, #tour-stop:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+
+#site-footer {
+  background: var(--bg-footer);
+  color: var(--text-secondary);
+  padding: var(--space-xl) var(--space-lg);
+  text-align: center;
+  border-top: 1px solid var(--border-medium);
+}
+
+.footer-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.footer-legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.footer-legend span {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-copy {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  body { font-size: 16px; }
+
+  .exhibits-grid {
+    grid-template-columns: 1fr;
+    padding: 0;
+  }
+
+  .room { padding: var(--space-lg) var(--space-md) var(--space-xl); }
+
+  .room-banner {
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding-bottom: var(--space-md);
+  }
+
+  .room-numeral { font-size: 4rem; }
+
+  #exhibit-panel {
+    width: 100vw;
+    border-left: none;
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .strand-legend { display: none; }
+
+  #site-nav { padding: 0 var(--space-md); }
+
+  .lobby-title { font-size: 2.2rem; }
+
+  #lobby { padding: var(--space-lg) var(--space-md); }
+
+  .throughline-role { display: none; }
+
+  #tour-label { display: none; }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .exhibits-grid { grid-template-columns: repeat(2, 1fr); }
+}
