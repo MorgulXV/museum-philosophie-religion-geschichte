@@ -176,4 +176,23 @@ test.describe('Museum: Responsiv', () => {
     const cards = await page.locator('.exhibit-card').count();
     expect(cards).toBe(39);
   });
+
+  test('Mobile: Einflussgraph wird zur Liste, kein Overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/index.html');
+    await page.waitForLoadState('networkidle');
+    // Liste sichtbar, Canvas versteckt
+    await expect(page.locator('#influence-list')).toBeVisible();
+    const canvasVisible = await page.locator('#graph-canvas').isVisible();
+    expect(canvasVisible).toBe(false);
+    // alle 39 Exponate in der Liste
+    const cards = await page.locator('.infl-card').count();
+    expect(cards).toBe(39);
+    // kein horizontales Overflow
+    const noOverflow = await page.locator('body').evaluate(el => el.scrollWidth <= el.clientWidth);
+    expect(noOverflow).toBe(true);
+    // Chip-Klick öffnet Panel
+    await page.locator('.infl-chip').first().click();
+    await expect(page.locator('#exhibit-panel')).toBeVisible();
+  });
 });

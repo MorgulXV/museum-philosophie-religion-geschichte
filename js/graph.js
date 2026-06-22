@@ -1,4 +1,4 @@
-import { exhibits, buildInfluenceGraph, getExhibitById } from '../data/exhibits.js';
+import { exhibits, rooms, buildInfluenceGraph, getExhibitById, getExhibitsByRoom, getInfluencedBy } from '../data/exhibits.js';
 import { openExhibit } from './render.js';
 
 const STRAND_COLORS = {
@@ -11,6 +11,9 @@ const ROOM_COLORS = {
   1: '#4a6fa5', 2: '#2d6a4f', 3: '#b5541a', 4: '#8b2635', 5: '#4a4a4a'
 };
 
+const MOBILE_BREAKPOINT = 768;
+const isMobile = () => window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
+
 let canvas, ctx;
 let layout = {};
 let hoveredId = null;
@@ -21,6 +24,9 @@ let isAnimating = true;
 
 let transform = { x: 0, y: 0, scale: 1 };
 let drag = { active: false, startX: 0, startY: 0, tx: 0, ty: 0 };
+
+let canvasInited = false;
+let listBuilt = false;
 
 const { nodes, edges } = buildInfluenceGraph();
 
@@ -273,13 +279,14 @@ function hitTest(sx, sy) {
   return null;
 }
 
-function initGraph() {
+function initCanvasGraph() {
   canvas = document.getElementById('graph-canvas');
   if (!canvas) return;
   ctx = canvas.getContext('2d');
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
     canvas.width = rect.width * devicePixelRatio;
     canvas.height = rect.height * devicePixelRatio;
     ctx.scale(devicePixelRatio, devicePixelRatio);
@@ -347,6 +354,134 @@ function initGraph() {
   });
 
   canvas.addEventListener('pointerup', () => { drag.active = false; });
+
+  canvasInited = true;
+}
+
+function buildMobileList() {
+  const container = document.getElementById('influence-list');
+  if (!container || listBuilt) return;
+
+  const STRAND_ORDER = ['philosophie', 'religion', 'geschichte'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
+
+  rooms.forEach(room => {
+    const roomExhibits = getExhibitsByRoom(room.id)
+      .slice()
+      .sort((a, b) => STRAND_ORDER.indexOf(a.strand) - STRAND_ORDER.indexOf(b.strand));
+
+    const group = document.createElement('div');
+    group.className = 'infl-room-group';
+
+    const heading = document.createElement('h3');
+    heading.className = 'infl-room-heading';
+    heading.textContent = `${ROMAN[room.id - 1]} ${room.title}`;
+    heading.style.setProperty('--room-color', `var(--room-${room.id})`);
+    group.appendChild(heading);
+
+    roomExhibits.forEach(exhibit => {
+      const card = document.createElement('div');
+      card.className = 'infl-card';
+
+      const head = document.createElement('div');
+      head.className = 'infl-card-head';
+      head.addEventListener('click', () => openExhibit(exhibit.id));
+
+      const dot = document.createElement('span');
+      dot.className = 'infl-strand-dot';
+      dot.textContent = '●';
+      dot.style.color = `var(--${exhibit.strand})`;
+
+      const name = document.createElement('span');
+      name.className = 'infl-name';
+      name.textContent = exhibit.name;
+
+      const date = document.createElement('span');
+      date.className = 'infl-date';
+      date.textContent = exhibit.date;
+
+      head.appendChild(dot);
+      head.appendChild(name);
+      head.appendChild(date);
+      card.appendChild(head);
+
+      if (exhibit.influences && exhibit.influences.length > 0) {
+        const label = document.createElement('p');
+        label.className = 'infl-rel-label';
+        label.textContent = 'Beeinflusst →';
+        card.appendChild(label);
+
+        const chips = document.createElement('div');
+        chips.className = 'infl-chips';
+        exhibit.influences.forEach(targetId => {
+          const target = getExhibitById(targetId);
+          if (!target) return;
+          const chip = document.createElement('button');
+          chip.className = 'infl-chip';
+          chip.textContent = target.name.split(' — ')[0];
+          chip.addEventListener('click', e => { e.stopPropagation(); openExhibit(targetId); });
+          chips.appendChild(chip);
+        });
+        card.appendChild(chips);
+      }
+
+      const influencers = getInfluencedBy(exhibit.id);
+      if (influencers.length > 0) {
+        const label = document.createElement('p');
+        label.className = 'infl-rel-label';
+        label.textContent = '← Beeinflusst durch';
+        card.appendChild(label);
+
+        const chips = document.createElement('div');
+        chips.className = 'infl-chips';
+        influencers.forEach(src => {
+          const chip = document.createElement('button');
+          chip.className = 'infl-chip';
+          chip.textContent = src.name.split(' — ')[0];
+          chip.addEventListener('click', e => { e.stopPropagation(); openExhibit(src.id); });
+          chips.appendChild(chip);
+        });
+        card.appendChild(chips);
+      }
+
+      group.appendChild(card);
+    });
+
+    container.appendChild(group);
+  });
+
+  listBuilt = true;
+}
+
+function applyMode() {
+  const canvasEl = document.getElementById('graph-canvas');
+  const listEl = document.getElementById('influence-list');
+  const hintDesktop = document.querySelector('.graph-hint-desktop');
+  const hintMobile = document.querySelector('.graph-hint-mobile');
+
+  if (isMobile()) {
+    if (canvasEl) canvasEl.style.display = 'none';
+    if (listEl) listEl.hidden = false;
+    if (hintDesktop) hintDesktop.hidden = true;
+    if (hintMobile) hintMobile.hidden = false;
+    buildMobileList();
+  } else {
+    if (canvasEl) canvasEl.style.display = '';
+    if (listEl) listEl.hidden = true;
+    if (hintDesktop) hintDesktop.hidden = false;
+    if (hintMobile) hintMobile.hidden = true;
+    if (!canvasInited) initCanvasGraph();
+  }
+}
+
+function initGraph() {
+  applyMode();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyMode, 150);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initGraph);

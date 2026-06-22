@@ -43,8 +43,10 @@
 
   <section id="influence-map" aria-label="Einflussgraph">
     <h2>Einflusslinien</h2>
-    <p class="graph-hint">Hover: Verbindungen hervorheben · Klick: Exponat öffnen · Scroll: Zoom · Ziehen: Verschieben</p>
+    <p class="graph-hint graph-hint-desktop">Hover: Verbindungen hervorheben · Klick: Exponat öffnen · Scroll: Zoom · Ziehen: Verschieben</p>
+    <p class="graph-hint graph-hint-mobile" hidden>Tippe auf ein Exponat, um es zu öffnen.</p>
     <canvas id="graph-canvas" aria-label="Gerichteter Einflussgraph aller 39 Exponate"></canvas>
+    <div id="influence-list" hidden></div>
   </section>
 
   <div id="panel-overlay" aria-hidden="true"></div>
