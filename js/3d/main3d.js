@@ -5,22 +5,19 @@ import { setupLighting }    from './Lighting.js';
 import { FPControls }       from './FirstPersonControls.js';
 import { placeExhibits }    from './ExhibitPlacement.js';
 import { Interaction }      from './Interaction.js';
-import { buildComposer, resizeComposer } from './PostProcessing.js';
 import { buildTextures }    from './Materials.js';
 import { rooms }            from '../../data/exhibits.js';
-import { ROMAN, ROOM_D, ROOM_COUNT } from './Constants.js';
+import { ROMAN, ROOM_COUNT } from './Constants.js';
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
 const canvas   = document.getElementById('museum3d-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(1);  // no retina scaling — 4× fill-rate saving on HiDPI screens
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled     = true;
-renderer.shadowMap.type        = THREE.PCFShadowMap;  // 4 taps/fragment vs PCFSoft's 9
-renderer.shadowMap.autoUpdate  = false;  // shadows computed once per room change
+renderer.shadowMap.enabled  = false;  // no shadows — eliminates shadow map sampling from all fragment shaders
 renderer.toneMapping        = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.85;
-renderer.outputColorSpace   = THREE.LinearSRGBColorSpace;
+renderer.outputColorSpace   = THREE.SRGBColorSpace;  // handles gamma automatically; no post-processing pass needed
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
@@ -44,10 +41,7 @@ const tex = buildTextures(renderer.capabilities.getMaxAnisotropy());
 // ── World ─────────────────────────────────────────────────────────────────────
 buildGallery(scene, tex);
 setupLighting(scene);
-const { exhibitMeshes, allSpotlights } = placeExhibits(scene, tex);
-
-// ── Post-processing ───────────────────────────────────────────────────────────
-const pp = buildComposer(renderer, scene, camera);
+const { exhibitMeshes } = placeExhibits(scene, tex);
 
 // ── Controls ──────────────────────────────────────────────────────────────────
 const controls    = new FPControls(camera, renderer.domElement);
@@ -74,9 +68,6 @@ function hideOverlay() {
 }
 
 // ── Render-on-demand ──────────────────────────────────────────────────────────
-// The scene has no animations — only render when something changes.
-// While pointer-locked (exploring), always render (camera moves every frame).
-// When the overlay/panel is shown, render once per event.
 let _dirty = true;
 function markDirty() { _dirty = true; }
 
@@ -112,24 +103,15 @@ function updateRoomLabel() {
   if (ri === lastRoomIdx) return;
   lastRoomIdx = ri;
   roomLabel.textContent = `Raum ${ROMAN[ri]} — ${rooms[ri]?.title ?? ''}`;
-  allSpotlights.forEach(({ spot, roomIdx }) => {
-    spot.castShadow = roomIdx === ri;
-  });
-  renderer.shadowMap.needsUpdate = true;
 }
-
-// ── First-frame shadow seed ────────────────────────────────────────────────────
-renderer.shadowMap.needsUpdate = true;
 
 // ── Render loop ───────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
 
-  // Always consume delta to prevent accumulated jumps after idle periods
-  const dt = clock.getDelta();
+  const dt = clock.getDelta();  // always consume to prevent accumulated-time jump
 
-  // Render every frame while exploring (pointer locked); on events otherwise
   if (controls.isLocked) _dirty = true;
   if (!_dirty) return;
   _dirty = false;
@@ -137,7 +119,7 @@ function animate() {
   controls.update(dt);
   interaction.update();
   updateRoomLabel();
-  pp.composer.render();
+  renderer.render(scene, camera);  // direct render — no EffectComposer overhead
 }
 animate();
 
@@ -147,6 +129,5 @@ window.addEventListener('resize', () => {
   camera.aspect = W / H;
   camera.updateProjectionMatrix();
   renderer.setSize(W, H);
-  resizeComposer(pp, W, H);
   markDirty();
 });

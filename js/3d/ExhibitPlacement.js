@@ -5,14 +5,13 @@ import { getExhibitsByRoom } from '../../data/exhibits.js';
 import {
   ROOM_W, ROOM_D, ROOM_H, ROOM_COUNT, STRAND_COLORS, STRAND_HEX, STRAND_LABELS_DE,
 } from './Constants.js';
-import { addExhibitSpotlight } from './Lighting.js';
 import { frameMat, plinthMat } from './Materials.js';
 
 const FRAME_W     = 1.4;
 const FRAME_H     = 1.6;
 const FRAME_DEPTH = 0.10;
 const FRAME_Y     = 2.55;
-// 0.22 (not 0.20) so the frame back face clears the wall inner face by ~0.02 — prevents Z-fighting
+// 0.22 (not 0.20) so the frame back face clears the wall inner face — prevents Z-fighting
 const WALL_OFFSET = 0.22;
 
 const LEFT_X  = -(ROOM_W / 2) + WALL_OFFSET;
@@ -21,10 +20,8 @@ const RIGHT_X =  (ROOM_W / 2) - WALL_OFFSET;
 const PLINTH_H = 1.00;
 const OBJ_Y    = PLINTH_H + 0.45;
 
-// Shared PBR materials — built once, referenced by all exhibits
 let _frameMat  = null;
 let _plinthMat = null;
-// Shared rebate material — one instance for all wall frames (identical across all exhibits)
 const _rebateMat = new THREE.MeshStandardMaterial({ color: 0x2a2218, roughness: 0.55, metalness: 0.05 });
 
 export function placeExhibits(scene, tex) {
@@ -32,31 +29,28 @@ export function placeExhibits(scene, tex) {
   _plinthMat = plinthMat(tex);
 
   const exhibitMeshes = new Map();
-  const allSpotlights = [];
 
-  // Geometry buckets — collected during placement, merged after
-  const frameGeos  = [];  // all outer frame boxes
-  const rebateGeos = [];  // all inner rebate boxes
-  const plinthGeos = [];  // all pedestal + cap cylinders
+  const frameGeos  = [];
+  const rebateGeos = [];
+  const plinthGeos = [];
 
   for (let ri = 0; ri < ROOM_COUNT; ri++) {
-    const exs    = getExhibitsByRoom(ri + 1);
-    const roomZ  = ROOM_D * ri;
-    const phi    = exs.filter(e => e.strand === 'philosophie');
-    const rel    = exs.filter(e => e.strand === 'religion');
-    const geo    = exs.filter(e => e.strand === 'geschichte');
+    const exs   = getExhibitsByRoom(ri + 1);
+    const roomZ = ROOM_D * ri;
+    const phi   = exs.filter(e => e.strand === 'philosophie');
+    const rel   = exs.filter(e => e.strand === 'religion');
+    const geo   = exs.filter(e => e.strand === 'geschichte');
 
-    placeWallRow(scene, phi, LEFT_X,  -Math.PI / 2, roomZ, ri, exhibitMeshes, allSpotlights, frameGeos, rebateGeos);
-    placeWallRow(scene, rel, RIGHT_X,  Math.PI / 2, roomZ, ri, exhibitMeshes, allSpotlights, frameGeos, rebateGeos);
-    placePlinths(scene, geo, roomZ, ri, exhibitMeshes, allSpotlights, plinthGeos);
+    placeWallRow(scene, phi, LEFT_X,  -Math.PI / 2, roomZ, exhibitMeshes, frameGeos, rebateGeos);
+    placeWallRow(scene, rel, RIGHT_X,  Math.PI / 2, roomZ, exhibitMeshes, frameGeos, rebateGeos);
+    placePlinths(scene, geo, roomZ, exhibitMeshes, plinthGeos);
   }
 
-  // Merge all static decoration geometry — one draw call per material
-  _addMerged(scene, frameGeos,  _frameMat,  true, true);
+  _addMerged(scene, frameGeos,  _frameMat,  false, false);
   _addMerged(scene, rebateGeos, _rebateMat, false, false);
-  _addMerged(scene, plinthGeos, _plinthMat, true,  true);
+  _addMerged(scene, plinthGeos, _plinthMat, false, false);
 
-  return { exhibitMeshes, allSpotlights };
+  return { exhibitMeshes };
 }
 
 function _addMerged(scene, geos, mat, castShadow, receiveShadow) {
@@ -69,10 +63,7 @@ function _addMerged(scene, geos, mat, castShadow, receiveShadow) {
   scene.add(m);
 }
 
-// ── Wall exhibits ──────────────────────────────────────────────────────────────
-// frameGeos / rebateGeos: geometry buckets — baked to world space for later merge.
-// Interactive inner planes stay as individual Meshes (needed for raycasting).
-function placeWallRow(scene, exhibits, wallX, rotY, roomZ, roomIdx, meshMap, spots, frameGeos, rebateGeos) {
+function placeWallRow(scene, exhibits, wallX, rotY, roomZ, meshMap, frameGeos, rebateGeos) {
   if (!exhibits.length) return;
   const usable  = ROOM_D - 4;
   const spacing = usable / (exhibits.length + 1);
@@ -83,19 +74,16 @@ function placeWallRow(scene, exhibits, wallX, rotY, roomZ, roomIdx, meshMap, spo
   exhibits.forEach((exhibit, i) => {
     const z = roomZ + 2 + spacing * (i + 1);
 
-    // Bake outer frame geometry to world space (group position + rotation)
     const fgeo = new THREE.BoxGeometry(FRAME_W, FRAME_H, FRAME_DEPTH);
     fgeo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(wallX, FRAME_Y, z), groupQuat, _scl));
     frameGeos.push(fgeo);
 
-    // Bake rebate geometry — local offset (0, 0, -(FRAME_DEPTH*0.3)) rotated by group quat
     const rebateOffset = new THREE.Vector3(0, 0, -(FRAME_DEPTH * 0.3)).applyQuaternion(groupQuat);
     const rebatePos    = new THREE.Vector3(wallX, FRAME_Y, z).add(rebateOffset);
     const rgeo = new THREE.BoxGeometry(FRAME_W - 0.18, FRAME_H - 0.18, FRAME_DEPTH * 0.4);
     rgeo.applyMatrix4(new THREE.Matrix4().compose(rebatePos, groupQuat, _scl));
     rebateGeos.push(rgeo);
 
-    // Artwork inner plane — stays as individual Mesh (raycasting target)
     const group = new THREE.Group();
     group.rotation.y = rotY;
     group.position.set(wallX, FRAME_Y, z);
@@ -110,17 +98,10 @@ function placeWallRow(scene, exhibits, wallX, rotY, roomZ, roomIdx, meshMap, spo
     scene.add(group);
 
     meshMap.set(exhibit.id, { mesh: inner, exhibit, baseEmissive: 0 });
-
-    const sx  = wallX + (rotY < 0 ? 1.8 : -1.8);
-    const spot = addExhibitSpotlight(scene, sx, ROOM_H - 0.3, z, wallX, FRAME_Y - 0.1, z, roomIdx);
-    spots.push({ spot, roomIdx });
   });
 }
 
-// ── Freestanding plinths ───────────────────────────────────────────────────────
-// plinthGeos: pedestal + cap geometry baked to world space for later merge.
-// Interactive artifact objects stay as individual Meshes (needed for raycasting).
-function placePlinths(scene, exhibits, roomZ, roomIdx, meshMap, spots, plinthGeos) {
+function placePlinths(scene, exhibits, roomZ, meshMap, plinthGeos) {
   if (!exhibits.length) return;
   const usable  = ROOM_D - 4;
   const spacing = usable / (exhibits.length + 1);
@@ -130,19 +111,16 @@ function placePlinths(scene, exhibits, roomZ, roomIdx, meshMap, spots, plinthGeo
     const z = roomZ + 2 + spacing * (i + 1);
     const x = (i % 2 === 0) ? -2.0 : 2.0;
 
-    // Bake pedestal cylinder to world space (no rotation, pure translation)
     const pedGeo = new THREE.CylinderGeometry(0.34, 0.42, PLINTH_H, 12);
     pedGeo.setAttribute('uv1', pedGeo.attributes.uv);
     pedGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, PLINTH_H / 2, z));
     plinthGeos.push(pedGeo);
 
-    // Bake cap cylinder
     const capGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.06, 12);
     capGeo.setAttribute('uv1', capGeo.attributes.uv);
     capGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, PLINTH_H + 0.03, z));
     plinthGeos.push(capGeo);
 
-    // Artifact on plinth — individual Mesh (raycasting target)
     const objCol = sCol.clone().lerp(new THREE.Color(STRAND_COLORS[exhibit.strand]), 0.6).multiplyScalar(1.3);
     const objMat = new THREE.MeshStandardMaterial({
       color: objCol, roughness: 0.42, metalness: 0.28, envMapIntensity: 1.2,
@@ -152,30 +130,22 @@ function placePlinths(scene, exhibits, roomZ, roomIdx, meshMap, spots, plinthGeo
     const obj = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.44, 0.44), objMat);
     obj.position.y         = OBJ_Y;
     obj.rotation.y         = (Math.PI / 7) + i * 0.4;
-    obj.castShadow         = true;
-    obj.receiveShadow      = true;
     obj.userData.exhibitId = exhibit.id;
     group.add(obj);
     scene.add(group);
 
     meshMap.set(exhibit.id, { mesh: obj, exhibit, baseEmissive: 0 });
-
-    const spot = addExhibitSpotlight(scene, x, ROOM_H - 0.3, z, x, OBJ_Y, z, roomIdx, Math.PI / 14);
-    spots.push({ spot, roomIdx });
   });
 }
 
-// ── Canvas artwork texture ─────────────────────────────────────────────────────
 function buildFrameTexture(exhibit) {
   const W = 512, H = 640;
   const c   = document.createElement('canvas');
   c.width   = W; c.height = H;
   const ctx = c.getContext('2d');
 
-  // Dark gallery label — real museum nameplates use dark backgrounds with light text
   ctx.fillStyle = '#1e1c18';
   ctx.fillRect(0, 0, W, H);
-  // Very subtle grain
   for (let g = 0; g < 300; g++) {
     const a = Math.random() * 0.04;
     ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
@@ -184,43 +154,36 @@ function buildFrameTexture(exhibit) {
 
   const hex = STRAND_HEX[exhibit.strand] || '#888';
 
-  // Top + bottom accent bars — strand colour
   ctx.fillStyle = hex;
   ctx.fillRect(0, 0, W, 8);
   ctx.fillRect(0, H - 8, W, 8);
 
-  // Strand label — strand colour, bright on dark bg
   ctx.font          = '16px "Courier New", monospace';
   ctx.fillStyle     = hex;
   ctx.textAlign     = 'center';
   ctx.letterSpacing = '0.15em';
   ctx.fillText((STRAND_LABELS_DE[exhibit.strand] || '').toUpperCase(), W / 2, 38);
 
-  // Divider line
   ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth   = 1;
   ctx.beginPath(); ctx.moveTo(52, 56); ctx.lineTo(W - 52, 56); ctx.stroke();
 
-  // Exhibit title — warm cream on dark
   ctx.font      = 'bold 48px Georgia, serif';
   ctx.fillStyle = '#f0ece0';
   wrapText(ctx, exhibit.name.split(' — ')[0], W / 2, 112, 440, 56);
 
-  // Second divider
   ctx.beginPath(); ctx.moveTo(52, H - 138); ctx.lineTo(W - 52, H - 138); ctx.stroke();
 
-  // Date — muted grey
   ctx.font      = '24px "Courier New", monospace';
   ctx.fillStyle = '#b0a890';
   ctx.fillText(exhibit.date, W / 2, H - 95);
 
-  // Artefact hint
   ctx.font      = '14px "Courier New", monospace';
   ctx.fillStyle = 'rgba(200,190,170,0.40)';
   ctx.fillText(exhibit.artefact?.assetHint || '', W / 2, H - 58);
 
   const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;  // canvas paints in sRGB; mark it so Three.js linearises correctly
+  tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 

@@ -48,20 +48,18 @@ function addMerged(scene, geos, mat, castShadow = false, receiveShadow = false) 
 
 // ── Floor ─────────────────────────────────────────────────────────────────────
 function buildFloor(scene, tex) {
-  const { col, nrm, rgh, disp } = tex.marble;
-  [col, nrm, rgh, disp].forEach(t => {
+  const { col, rgh } = tex.marble;
+  [col, rgh].forEach(t => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(6, 36);
   });
   const floorMat = new THREE.MeshStandardMaterial({
     color: 0x948f88,
-    map: col, normalMap: nrm, roughnessMap: rgh,
-    displacementMap: disp, displacementScale: 0.010,
+    map: col, roughnessMap: rgh,
     roughness: 0.96, metalness: 0.0, side: THREE.DoubleSide,
     envMapIntensity: 0,
   });
-  const geo = new THREE.PlaneGeometry(ROOM_W, TOTAL_D, 8, 48);  // 768 tris vs 19 200 — displacement is 0.01 m, imperceptible at higher density
-  const f   = mesh(geo, floorMat, false, true);
+  const f = mesh(new THREE.PlaneGeometry(ROOM_W, TOTAL_D), floorMat, false, false);
   f.rotation.x = -Math.PI / 2;
   f.position.set(0, 0, TOTAL_D / 2);
   scene.add(f);
