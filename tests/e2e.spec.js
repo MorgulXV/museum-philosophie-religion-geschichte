@@ -196,3 +196,118 @@ test.describe('Museum: Responsiv', () => {
     await expect(page.locator('#exhibit-panel')).toBeVisible();
   });
 });
+
+test.describe('Museum: Graph-Suche', () => {
+  test('Tippen zeigt Treffer und Enter öffnet das Exponat', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#graph-search').fill('nietz');
+    await expect(page.locator('#graph-search-results')).toBeVisible();
+    await expect(page.locator('#graph-search-results li').first()).toContainText('Nietzsche');
+    await page.locator('#graph-search').press('Enter');
+    await expect(page.locator('#exhibit-panel')).not.toHaveAttribute('hidden');
+    await expect(page.locator('.panel-name')).toContainText('Nietzsche');
+  });
+
+  test('Kein Treffer zeigt Hinweis', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#graph-search').fill('zzzzz');
+    await expect(page.locator('.search-empty')).toBeVisible();
+  });
+});
+
+test.describe('Museum: Ansicht & Zoom', () => {
+  test('Graph/Liste-Umschalter wechselt die Ansicht', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#view-list').click();
+    await expect(page.locator('#influence-list')).toBeVisible();
+    await expect(page.locator('.graph-stage')).toBeHidden();
+    await page.locator('#view-graph').click();
+    await expect(page.locator('.graph-stage')).toBeVisible();
+    await expect(page.locator('#influence-list')).toBeHidden();
+  });
+
+  test('Zoom- und Reset-Buttons sind vorhanden und reagieren', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#zoom-in').click();
+    await page.locator('#zoom-out').click();
+    await page.locator('#zoom-reset').click();
+    expect(errors).toHaveLength(0);
+  });
+});
+
+test.describe('Museum: Onboarding-Hinweis', () => {
+  test('Hinweiskarte erscheint beim Graphen und lässt sich schließen', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#influence-map').scrollIntoViewIfNeeded();
+    await expect(page.locator('#graph-hintcard')).toBeVisible();
+    await page.locator('.hintcard-close').click();
+    await expect(page.locator('#graph-hintcard')).toBeHidden();
+    // ? button öffnet erneut
+    await page.locator('#graph-help').click();
+    await expect(page.locator('#graph-hintcard')).toBeVisible();
+  });
+});
+
+test.describe('Museum: Filter-Feinschliff', () => {
+  test('Filter zeigt aktive Anzahl an', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('.exhibit-card');
+    await expect(page.locator('#filter-count')).toContainText('39 Exponate');
+    await page.locator('#strand-filter .filter-btn[data-strand="philosophie"]').click();
+    await expect(page.locator('#filter-count')).toContainText('Philosophie — 18');
+  });
+
+  test('Legenden-Punkte filtern den Graphen', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('.exhibit-card');
+    await page.locator('.legend-key[data-strand="religion"]').click();
+    await expect(page.locator('body')).toHaveAttribute('data-strand-filter', 'religion');
+    // erneuter Klick hebt den Filter auf
+    await page.locator('.legend-key[data-strand="religion"]').click();
+    await expect(page.locator('body')).not.toHaveAttribute('data-strand-filter');
+  });
+});
+
+test.describe('Museum: Rundgang-Tiefe', () => {
+  test('Vor und zurück mit den Pfeiltasten', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('.exhibit-card');
+    await page.locator('#tour-btn').click();
+    await expect(page.locator('#tour-label')).toContainText('Station 1 / 39');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tour-label')).toContainText('Station 2 / 39');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#tour-label')).toContainText('Station 1 / 39');
+    // Zurück-Button ist an Station 1 deaktiviert
+    await expect(page.locator('#tour-prev')).toBeDisabled();
+  });
+
+  test('Letzte Station zeigt die Abschlusskarte', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('.exhibit-card');
+    await page.locator('#tour-btn').click();
+    await expect(page.locator('#tour-label')).toContainText('Station 1 / 39');
+    for (let i = 0; i < 39; i++) await page.keyboard.press('ArrowRight');
+    await expect(page.locator('#tour-end')).toBeVisible();
+    await expect(page.locator('.tour-end-quote')).toContainText('Das Gespräch geht weiter');
+    await expect(page.locator('#exhibit-panel')).toHaveAttribute('hidden', '');
+    await page.locator('#tour-end-explore').click();
+    await expect(page.locator('#tour-end')).toBeHidden();
+  });
+});
+
+test.describe('Museum: Metadaten', () => {
+  test('Beschreibung, OG-Tags und Favicon sind gesetzt', async ({ page }) => {
+    await page.goto('/index.html');
+    await expect(page.locator('meta[name="description"]')).toHaveCount(1);
+    await expect(page.locator('meta[property="og:image"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /favicon\.svg/);
+  });
+});
