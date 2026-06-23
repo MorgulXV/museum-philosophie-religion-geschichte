@@ -210,6 +210,12 @@ blockquote {
 
 .btn-primary:hover { background: var(--accent); }
 
+/* 3D-Ansicht nur auf PCs (Maus + Hover) — WebGL-Steuerung ist nicht touch-tauglich */
+#btn-3d { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  #btn-3d { display: inline-flex; }
+}
+
 /* ── Throughline ─────────────────────────────────────────────────── */
 
 #throughline {
