@@ -405,15 +405,8 @@ function initCanvasGraph() {
       case 'ArrowDown':  transform.y -= PAN; break;
       case '+': case '=': zoomButton(1.25); return;
       case '-': case '_': zoomButton(0.8); return;
-      case 'Tab': {
-        // Cycle highlight through nodes
-        e.preventDefault();
-        const idx = nodes.findIndex(n => n.id === hoveredId);
-        const next = e.shiftKey ? (idx - 1 + nodes.length) % nodes.length : (idx + 1) % nodes.length;
-        hoveredId = nodes[next].id;
-        focusGraphNode(hoveredId, { open: false });
-        return;
-      }
+      // Tab is intentionally NOT intercepted: focus must be able to leave the
+      // canvas (WCAG 2.1.2). Keyboard node access is provided by search.
       case 'Enter': case ' ':
         if (hoveredId) { e.preventDefault(); openExhibit(hoveredId); }
         return;

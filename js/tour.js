@@ -117,7 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Keyboard control while the tour runs
   document.addEventListener('keydown', e => {
     if (!tourEnd()?.hidden) {
-      if (e.key === 'Escape') hideEnd();
+      if (e.key === 'Escape') { hideEnd(); return; }
+      if (e.key === 'Tab') {
+        const els = [...tourEnd().querySelectorAll('button')].filter(b => b.offsetParent !== null);
+        if (els.length) {
+          const first = els[0], last = els[els.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
       return;
     }
     if (!tourActive) return;

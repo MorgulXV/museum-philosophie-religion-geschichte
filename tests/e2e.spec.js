@@ -229,6 +229,16 @@ test.describe('Museum: Ansicht & Zoom', () => {
     await expect(page.locator('#influence-list')).toBeHidden();
   });
 
+  test('Tab verlässt den Canvas (kein Tastatur-Trap, WCAG 2.1.2)', async ({ page }) => {
+    await page.goto('/index.html');
+    await page.waitForSelector('#graph-canvas');
+    await page.locator('#graph-canvas').focus();
+    await expect(page.locator('#graph-canvas')).toBeFocused();
+    await page.keyboard.press('Tab');
+    const leftCanvas = await page.evaluate(() => document.activeElement?.id !== 'graph-canvas');
+    expect(leftCanvas).toBe(true);
+  });
+
   test('Zoom- und Reset-Buttons sind vorhanden und reagieren', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
