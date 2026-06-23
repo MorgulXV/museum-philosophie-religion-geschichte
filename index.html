@@ -3,7 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Museum — Philosophie, Religion &amp; Geschichte</title>
+  <title>Museum der Ideen — Philosophie, Religion &amp; Geschichte</title>
+  <meta name="description" content="Ein interaktives Museum: 39 Exponate, 5 Räume und 73 Einflusslinien zeigen, wie Ideen über 2.500 Jahre einander auslösten — von Pythagoras bis zu den Vier Reitern.">
+  <meta name="author" content="Museum der Ideen">
+  <meta name="theme-color" content="#faf9f7">
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+  <!-- Open Graph / social sharing -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Museum der Ideen — Philosophie, Religion &amp; Geschichte">
+  <meta property="og:description" content="39 Exponate · 5 Räume · 73 Einflusskanten. Ein navigierbarer Einflussgraph von Pythagoras bis zu den Vier Reitern.">
+  <meta property="og:image" content="assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="de_DE">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Museum der Ideen — Philosophie, Religion &amp; Geschichte">
+  <meta name="twitter:description" content="Ein interaktiver Einflussgraph: welche Ideen welche Ideen auslösten, über 2.500 Jahre.">
+  <meta name="twitter:image" content="assets/og-image.png">
+
   <link rel="stylesheet" href="css/museum.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,13 +115,31 @@
     </div>
   </aside>
 
-  <div id="tour-bar" hidden aria-label="Rundgang-Fortschritt">
+  <div id="tour-bar" hidden role="group" aria-label="Rundgang-Fortschritt">
     <div id="tour-progress-track" aria-hidden="true">
       <div id="tour-progress"></div>
     </div>
-    <span id="tour-label"></span>
-    <button id="tour-next">Weiter →</button>
-    <button id="tour-stop">Beenden</button>
+    <span id="tour-label" aria-live="polite"></span>
+    <div class="tour-controls">
+      <button id="tour-prev" aria-label="Vorherige Station">← Zurück</button>
+      <button id="tour-next" aria-label="Nächste Station">Weiter →</button>
+      <button id="tour-stop" aria-label="Rundgang beenden">Beenden</button>
+    </div>
+  </div>
+
+  <div id="tour-end" class="tour-end" hidden role="dialog" aria-modal="true" aria-label="Rundgang beendet">
+    <div class="tour-end-card">
+      <p class="tour-end-kicker">Ende des Rundgangs</p>
+      <p class="tour-end-quote">Das Gespräch geht weiter.</p>
+      <p class="tour-end-text">
+        Sie haben alle 39 Exponate durchschritten — von Pythagoras bis zu den Vier Reitern.
+        Anklage und Verteidigung sitzen noch immer am selben Tisch.
+      </p>
+      <div class="tour-end-actions">
+        <button id="tour-end-explore" class="lobby-cta">Frei erkunden</button>
+        <button id="tour-end-restart" class="lobby-cta-secondary">Rundgang wiederholen</button>
+      </div>
+    </div>
   </div>
 
   <footer id="site-footer">

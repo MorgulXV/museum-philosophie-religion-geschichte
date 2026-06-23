@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Museum">
+  <rect width="32" height="32" fill="#11100e"/>
+  <!-- influence edges -->
+  <g stroke="#6b5526" stroke-width="1.3" fill="none" opacity="0.8">
+    <path d="M8 9 C 14 9, 12 16, 16 16"/>
+    <path d="M16 16 C 20 16, 19 23, 24 23"/>
+  </g>
+  <!-- philosophie: circle -->
+  <circle cx="8" cy="9" r="3.4" fill="#5b7ba3"/>
+  <!-- religion: diamond -->
+  <path d="M16 12.2 L19.8 16 L16 19.8 L12.2 16 Z" fill="#4e7a60"/>
+  <!-- geschichte: triangle -->
+  <path d="M24 19.3 L27.4 25.2 L20.6 25.2 Z" fill="#a07a4e"/>
+</svg>
