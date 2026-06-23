@@ -974,7 +974,9 @@ body[data-strand-filter="geschichte"] .exhibit-card[data-strand="religion"] {
   max-width: 220px;
 }
 
-#tour-next, #tour-stop {
+.tour-controls { display: flex; gap: var(--space-sm); align-items: center; }
+
+#tour-prev, #tour-next, #tour-stop {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   background: none;
@@ -987,9 +989,75 @@ body[data-strand-filter="geschichte"] .exhibit-card[data-strand="religion"] {
   white-space: nowrap;
 }
 
-#tour-next:hover, #tour-stop:hover {
+#tour-prev:hover:not(:disabled), #tour-next:hover, #tour-stop:hover {
   border-color: var(--text-primary);
   color: var(--text-primary);
+}
+
+#tour-prev:disabled { opacity: 0.35; cursor: not-allowed; }
+
+#tour-next {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
+}
+#tour-next:hover { background: #564320; border-color: #564320; color: var(--text-inverse); }
+
+/* ── Tour closing card ───────────────────────────────────────────── */
+.tour-end {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(26, 23, 20, 0.55);
+  animation: tour-end-fade var(--duration) var(--ease);
+}
+.tour-end[hidden] { display: none; }
+
+@keyframes tour-end-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.tour-end-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 20px 60px rgba(26, 23, 20, 0.3);
+  max-width: 520px;
+  width: 100%;
+  padding: var(--space-lg);
+  text-align: center;
+}
+.tour-end-kicker {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+.tour-end-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  line-height: 1.2;
+  color: var(--text-primary);
+  text-wrap: balance;
+  margin-bottom: var(--space-md);
+}
+.tour-end-text {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 40ch;
+  margin: 0 auto var(--space-lg);
+  text-wrap: pretty;
+}
+.tour-end-actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* ── Footer ──────────────────────────────────────────────────────── */
@@ -1033,6 +1101,274 @@ body[data-strand-filter="geschichte"] .exhibit-card[data-strand="religion"] {
   color: var(--text-dim);
   letter-spacing: 0.04em;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   UX & Navigation additions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Hero call-to-action + credential line ───────────────────────── */
+.lobby-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.lobby-cta {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.7rem 1.6rem;
+  background: var(--accent);
+  color: var(--text-inverse);
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+.lobby-cta:hover { background: #564320; }
+.lobby-cta:active { transform: translateY(1px); }
+
+.lobby-cta-secondary {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+.lobby-cta-secondary:hover { color: var(--accent); border-color: var(--accent); }
+
+.lobby-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  margin-bottom: var(--space-xl);
+}
+.lobby-stats span { position: relative; }
+.lobby-stats span:not(:last-child)::after {
+  content: "·";
+  position: absolute;
+  right: calc(var(--space-md) / -2);
+  transform: translateX(50%);
+  color: var(--rule);
+}
+
+/* ── Clickable legend keys ───────────────────────────────────────── */
+.strand-legend { display: flex; align-items: center; gap: var(--space-md); }
+.legend-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+  transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+.legend-key:hover { color: var(--text-primary); }
+.legend-key.active { color: var(--text-primary); border-bottom-color: currentColor; }
+.legend-key .strand-dot { font-size: 0.7rem; }
+
+#filter-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  align-self: center;
+}
+
+/* ── Graph header + tools ────────────────────────────────────────── */
+.graph-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+.graph-head-text { flex: 1 1 320px; }
+.graph-head .graph-hint { margin-bottom: 0; }
+
+.graph-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* Search */
+.graph-search { position: relative; }
+#graph-search {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  padding: 0.45rem 0.7rem;
+  width: 210px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition: border-color var(--duration) var(--ease);
+}
+#graph-search:focus { outline: none; border-color: var(--accent); }
+#graph-search::placeholder { color: var(--text-dim); }
+
+#graph-search-results {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 8px 24px rgba(26,23,20,0.12);
+  z-index: 50;
+  max-height: 320px;
+  overflow-y: auto;
+}
+#graph-search-results li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+}
+#graph-search-results li:last-child { border-bottom: none; }
+#graph-search-results li.active,
+#graph-search-results li:hover { background: var(--bg-section); }
+#graph-search-results li.search-empty { color: var(--text-muted); cursor: default; font-style: italic; }
+.search-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; }
+.search-name { flex: 1; }
+.search-date { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-dim); }
+
+/* View toggle */
+.graph-view-toggle { display: inline-flex; border: 1px solid var(--border-medium); }
+.view-btn {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+.view-btn + .view-btn { border-left: 1px solid var(--border-medium); }
+.view-btn.active { background: var(--text-primary); color: var(--text-inverse); }
+
+/* ── Graph stage (canvas + overlays) ─────────────────────────────── */
+.graph-stage { position: relative; }
+.graph-stage[hidden] { display: none; }
+#graph-canvas { cursor: grab; }
+#graph-canvas:active { cursor: grabbing; }
+#graph-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.graph-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+}
+.graph-zoom button {
+  width: 34px;
+  height: 34px;
+  font-size: 1.1rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+.graph-zoom button + button { border-top: 1px solid var(--border); }
+.graph-zoom button:hover { background: var(--bg-section); color: var(--text-primary); }
+
+#graph-help {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+#graph-help:hover { background: var(--accent); color: var(--text-inverse); border-color: var(--accent); }
+
+.graph-hintcard {
+  position: absolute;
+  left: 12px;
+  bottom: 54px;
+  width: 290px;
+  max-width: calc(100% - 24px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 10px 30px rgba(26,23,20,0.14);
+  padding: var(--space-md);
+  z-index: 40;
+}
+.graph-hintcard[hidden] { display: none; }
+.graph-hintcard h3 {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+.graph-hintcard ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.graph-hintcard li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.graph-hintcard li b { color: var(--text-primary); font-weight: 600; }
+.hint-glyph {
+  flex: none;
+  width: 1.1rem;
+  text-align: center;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+.hintcard-close {
+  margin-top: var(--space-md);
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  padding: 0.45rem;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: none;
+  cursor: pointer;
+}
+.hintcard-close:hover { background: var(--accent); }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 
@@ -1081,6 +1417,14 @@ body[data-strand-filter="geschichte"] .exhibit-card[data-strand="religion"] {
   #throughline { overflow: hidden; }
 
   #influence-map { padding-left: var(--space-md); padding-right: var(--space-md); }
+
+  .graph-head { align-items: stretch; }
+  .graph-tools { width: 100%; }
+  .graph-search { flex: 1; }
+  #graph-search { width: 100%; }
+  .lobby-actions { flex-direction: column; align-items: flex-start; gap: var(--space-sm); }
+  .lobby-cta { width: 100%; text-align: center; }
+  #filter-count { width: 100%; margin-left: 0; order: 99; }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {

@@ -10,41 +10,49 @@ const tourSequence = [...exhibits].sort((a, b) => {
 
 let tourActive = false;
 let tourIndex = 0;
+let pendingOpen = null;
 
-function tourBar() { return document.getElementById('tour-bar'); }
-function tourProgress() { return document.getElementById('tour-progress'); }
-function tourLabel() { return document.getElementById('tour-label'); }
-function tourBtn() { return document.getElementById('tour-btn'); }
+const $ = id => document.getElementById(id);
+const tourBar = () => $('tour-bar');
+const tourProgress = () => $('tour-progress');
+const tourLabel = () => $('tour-label');
+const tourBtn = () => $('tour-btn');
+const tourEnd = () => $('tour-end');
 
 function startTour() {
+  hideEnd();
   tourActive = true;
   tourIndex = 0;
   const bar = tourBar();
   if (bar) bar.hidden = false;
   const btn = tourBtn();
-  if (btn) btn.textContent = 'Rundgang läuft...';
+  if (btn) btn.textContent = 'Rundgang läuft …';
   showTourItem();
 }
 
 function showTourItem() {
-  if (tourIndex >= tourSequence.length) { stopTour(); return; }
   const exhibit = tourSequence[tourIndex];
   scrollToExhibit(exhibit.id);
-  setTimeout(() => openExhibit(exhibit.id), 400);
+  clearTimeout(pendingOpen);
+  pendingOpen = setTimeout(() => openExhibit(exhibit.id), 400);
   updateTourBar();
 }
 
 function advanceTour() {
+  if (tourIndex >= tourSequence.length - 1) { finishTour(); return; }
   tourIndex++;
-  if (tourIndex >= tourSequence.length) {
-    stopTour();
-  } else {
-    showTourItem();
-  }
+  showTourItem();
+}
+
+function retreatTour() {
+  if (tourIndex <= 0) return;
+  tourIndex--;
+  showTourItem();
 }
 
 function stopTour() {
   tourActive = false;
+  clearTimeout(pendingOpen);
   const bar = tourBar();
   if (bar) bar.hidden = true;
   const btn = tourBtn();
@@ -52,28 +60,77 @@ function stopTour() {
   closePanel();
 }
 
+// Reached the last station → designed closing moment.
+function finishTour() {
+  tourActive = false;
+  clearTimeout(pendingOpen);
+  const bar = tourBar();
+  if (bar) bar.hidden = true;
+  closePanel();
+  const end = tourEnd();
+  if (end) {
+    end.hidden = false;
+    requestAnimationFrame(() => $('tour-end-explore')?.focus());
+  }
+  const btn = tourBtn();
+  if (btn) btn.textContent = 'Rundgang starten';
+}
+
+function hideEnd() {
+  const end = tourEnd();
+  if (end) end.hidden = true;
+}
+
 function updateTourBar() {
-  const progress = tourIndex / tourSequence.length * 100;
+  const total = tourSequence.length;
   const pg = tourProgress();
-  if (pg) pg.style.width = progress + '%';
+  if (pg) pg.style.width = `${((tourIndex + 1) / total) * 100}%`;
+
   const lbl = tourLabel();
   if (lbl) {
     const exhibit = tourSequence[tourIndex];
-    lbl.textContent = `${tourIndex + 1} / ${tourSequence.length} — ${exhibit.name.split(' — ')[0]}`;
+    lbl.textContent = `Station ${tourIndex + 1} / ${total} — ${exhibit.name.split(' — ')[0]}`;
   }
+
+  const prev = $('tour-prev');
+  if (prev) prev.disabled = tourIndex === 0;
+  const next = $('tour-next');
+  if (next) next.textContent = tourIndex >= total - 1 ? 'Abschließen ✓' : 'Weiter →';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const btn = tourBtn();
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (tourActive) { stopTour(); } else { startTour(); }
-    });
-  }
+  const toggle = () => { if (tourActive) stopTour(); else startTour(); };
+  tourBtn()?.addEventListener('click', toggle);
 
-  const nextBtn = document.getElementById('tour-next');
-  if (nextBtn) nextBtn.addEventListener('click', advanceTour);
+  // Hero CTA and any other tour-start triggers
+  document.querySelectorAll('[data-tour-start]').forEach(el => {
+    el.addEventListener('click', () => { if (!tourActive) startTour(); });
+  });
 
-  const stopBtn = document.getElementById('tour-stop');
-  if (stopBtn) stopBtn.addEventListener('click', stopTour);
+  $('tour-prev')?.addEventListener('click', retreatTour);
+  $('tour-next')?.addEventListener('click', advanceTour);
+  $('tour-stop')?.addEventListener('click', stopTour);
+
+  $('tour-end-explore')?.addEventListener('click', hideEnd);
+  $('tour-end-restart')?.addEventListener('click', startTour);
+
+  // Keyboard control while the tour runs
+  document.addEventListener('keydown', e => {
+    if (!tourEnd()?.hidden) {
+      if (e.key === 'Escape') { hideEnd(); return; }
+      if (e.key === 'Tab') {
+        const els = [...tourEnd().querySelectorAll('button')].filter(b => b.offsetParent !== null);
+        if (els.length) {
+          const first = els[0], last = els[els.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+      return;
+    }
+    if (!tourActive) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); advanceTour(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); retreatTour(); }
+    else if (e.key === 'Escape') { e.preventDefault(); stopTour(); }
+  });
 });
