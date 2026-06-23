@@ -13,10 +13,10 @@
 
   <nav id="site-nav" aria-label="Museum Navigation">
     <div class="nav-logo">Museum</div>
-    <div class="strand-legend" aria-label="Strang-Legende">
-      <span class="strand-dot philosophie" aria-hidden="true">●</span><span>Philosophie</span>
-      <span class="strand-dot religion" aria-hidden="true">●</span><span>Religion</span>
-      <span class="strand-dot geschichte" aria-hidden="true">●</span><span>Geschichte</span>
+    <div class="strand-legend" aria-label="Strang-Legende — zum Filtern anklicken">
+      <button class="legend-key" data-strand="philosophie"><span class="strand-dot philosophie" aria-hidden="true">●</span>Philosophie</button>
+      <button class="legend-key" data-strand="religion"><span class="strand-dot religion" aria-hidden="true">◆</span>Religion</button>
+      <button class="legend-key" data-strand="geschichte"><span class="strand-dot geschichte" aria-hidden="true">▲</span>Geschichte</button>
     </div>
     <div class="nav-actions">
       <button id="tour-btn" class="btn-ghost">Rundgang starten</button>
@@ -32,6 +32,7 @@
     <button class="filter-btn" data-strand="philosophie">Philosophie</button>
     <button class="filter-btn" data-strand="religion">Religion</button>
     <button class="filter-btn" data-strand="geschichte">Geschichte</button>
+    <span id="filter-count" aria-live="polite"></span>
   </div>
 
   <main id="main-content">
@@ -42,10 +43,49 @@
   </main>
 
   <section id="influence-map" aria-label="Einflussgraph">
-    <h2>Einflusslinien</h2>
-    <p class="graph-hint graph-hint-desktop">Hover: Verbindungen hervorheben · Klick: Exponat öffnen · Scroll: Zoom · Ziehen: Verschieben</p>
-    <p class="graph-hint graph-hint-mobile" hidden>Tippe auf ein Exponat, um es zu öffnen.</p>
-    <canvas id="graph-canvas" aria-label="Gerichteter Einflussgraph aller 39 Exponate"></canvas>
+    <div class="graph-head">
+      <div class="graph-head-text">
+        <h2>Einflusslinien</h2>
+        <p class="graph-hint graph-hint-desktop">73 Einflusskanten zwischen 39 Exponaten, gelesen von links (Antike) nach rechts (Gegenwart).</p>
+        <p class="graph-hint graph-hint-mobile" hidden>Tippe auf ein Exponat, um es zu öffnen.</p>
+      </div>
+      <div class="graph-tools">
+        <div class="graph-search" role="search">
+          <input id="graph-search" type="search" placeholder="Exponat suchen…"
+                 aria-label="Exponat im Graphen suchen" autocomplete="off"
+                 aria-expanded="false" aria-controls="graph-search-results">
+          <ul id="graph-search-results" role="listbox" aria-label="Suchergebnisse" hidden></ul>
+        </div>
+        <div class="graph-view-toggle" role="tablist" aria-label="Ansicht wählen">
+          <button id="view-graph" class="view-btn active" role="tab" aria-selected="true">Graph</button>
+          <button id="view-list" class="view-btn" role="tab" aria-selected="false">Liste</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="graph-stage">
+      <canvas id="graph-canvas" tabindex="0"
+              role="application"
+              aria-label="Gerichteter Einflussgraph aller 39 Exponate. Pfeiltasten bewegen, Plus und Minus zoomen, Enter öffnet das hervorgehobene Exponat."></canvas>
+      <div class="graph-zoom" role="group" aria-label="Zoom-Steuerung">
+        <button id="zoom-in" type="button" aria-label="Vergrößern">+</button>
+        <button id="zoom-out" type="button" aria-label="Verkleinern">−</button>
+        <button id="zoom-reset" type="button" aria-label="Ansicht zurücksetzen">⊙</button>
+      </div>
+      <button id="graph-help" type="button" aria-label="Steuerung anzeigen" aria-expanded="false" aria-controls="graph-hintcard">?</button>
+      <div id="graph-hintcard" class="graph-hintcard" role="dialog" aria-label="Graph-Steuerung" hidden>
+        <h3>So bewegen Sie sich</h3>
+        <ul>
+          <li><span class="hint-glyph" aria-hidden="true">⊹</span> <b>Zeigen</b> hebt die Verbindungen hervor</li>
+          <li><span class="hint-glyph" aria-hidden="true">⊙</span> <b>Klick</b> öffnet das Exponat</li>
+          <li><span class="hint-glyph" aria-hidden="true">⤢</span> <b>Scrollen</b> oder ＋ / − zoomt</li>
+          <li><span class="hint-glyph" aria-hidden="true">✥</span> <b>Ziehen</b> verschiebt die Ansicht</li>
+          <li><span class="hint-glyph" aria-hidden="true">⌕</span> <b>Suchen</b> springt zu einem Namen</li>
+        </ul>
+        <button class="hintcard-close" type="button">Verstanden</button>
+      </div>
+    </div>
+
     <div id="influence-list" hidden></div>
   </section>
 

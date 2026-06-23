@@ -1,5 +1,5 @@
 import { exhibits, rooms, buildInfluenceGraph, getExhibitById, getExhibitsByRoom, getInfluencedBy } from '../data/exhibits.js';
-import { openExhibit } from './render.js';
+import { openExhibit, scrollToExhibit } from './render.js';
 
 const STRAND_COLORS = {
   philosophie: '#3f5775',
@@ -72,18 +72,24 @@ function screenToWorld(sx, sy) {
 }
 
 function drawEdges(progress) {
+  const filter = activeFilter();
   edges.forEach(edge => {
     const src = layout[edge.source];
     const tgt = layout[edge.target];
     if (!src || !tgt) return;
 
     const srcNode = nodes.find(n => n.id === edge.source);
+    const tgtNode = nodes.find(n => n.id === edge.target);
     const col = STRAND_COLORS[srcNode?.strand] || '#888';
 
     const isHighlighted = hoveredId && (edge.source === hoveredId || edge.target === hoveredId);
+    const dimByFilter = filter && srcNode?.strand !== filter && tgtNode?.strand !== filter;
 
     let edgeStroke, edgeAlpha;
-    if (hoveredId) {
+    if (dimByFilter) {
+      edgeStroke = 'rgba(26,23,20,0.04)';
+      edgeAlpha = 1;
+    } else if (hoveredId) {
       if (isHighlighted) {
         edgeStroke = col;
         edgeAlpha = 0.85;
@@ -142,7 +148,30 @@ function drawEdges(progress) {
   });
 }
 
+// Distinct shape per strand so the graph reads without relying on hue alone.
+function tracePath(strand, x, y, r) {
+  ctx.beginPath();
+  if (strand === 'religion') {
+    // diamond
+    ctx.moveTo(x, y - r); ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
+  } else if (strand === 'geschichte') {
+    // upward triangle
+    const h = r * 1.15;
+    ctx.moveTo(x, y - h); ctx.lineTo(x + h * 0.92, y + h * 0.66);
+    ctx.lineTo(x - h * 0.92, y + h * 0.66); ctx.closePath();
+  } else {
+    // circle (philosophie)
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+  }
+}
+
+function activeFilter() {
+  return document.body.dataset.strandFilter || null;
+}
+
 function drawNodes() {
+  const filter = activeFilter();
   nodes.forEach(node => {
     const pos = layout[node.id];
     if (!pos) return;
@@ -151,31 +180,42 @@ function drawNodes() {
     const r = pos.r * transform.scale;
     const col = STRAND_COLORS[node.strand] || '#888';
     const isHovered = hoveredId === node.id;
+    const dimByFilter = filter && node.strand !== filter;
+
+    let alpha;
+    if (dimByFilter) alpha = 0.1;
+    else if (isHovered) alpha = 1.0;
+    else if (hoveredId) alpha = 0.5;
+    else alpha = 0.9;
 
     ctx.save();
-
-    if (isHovered) {
+    if (isHovered && !dimByFilter) {
       ctx.shadowBlur = 20 * transform.scale;
       ctx.shadowColor = col;
     }
-
-    ctx.beginPath();
-    ctx.arc(x, y, isHovered ? r + 4 * transform.scale : r, 0, Math.PI * 2);
+    tracePath(node.strand, x, y, isHovered ? r + 4 * transform.scale : r);
     ctx.fillStyle = col;
-    ctx.globalAlpha = isHovered ? 1.0 : (hoveredId ? 0.5 : 0.85);
+    ctx.globalAlpha = alpha;
     ctx.fill();
-
+    // subtle ring on hover for extra non-color emphasis
+    if (isHovered && !dimByFilter) {
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#1a1714';
+      ctx.globalAlpha = 0.6;
+      tracePath(node.strand, x, y, r + 7 * transform.scale);
+      ctx.stroke();
+    }
     ctx.restore();
 
     // Label
     if (transform.scale > 0.6) {
-      const shortName = node.label;
       ctx.save();
       ctx.font = `${Math.max(8, 9 * transform.scale)}px 'Inter', sans-serif`;
       ctx.fillStyle = isHovered ? '#1a1714' : '#57514b';
-      ctx.globalAlpha = isHovered ? 1.0 : (hoveredId ? 0.3 : 0.7);
+      ctx.globalAlpha = dimByFilter ? 0.08 : (isHovered ? 1.0 : (hoveredId ? 0.3 : 0.7));
       ctx.textAlign = 'center';
-      ctx.fillText(shortName, x, y + r + 12 * transform.scale);
+      ctx.fillText(node.label, x, y + r + 12 * transform.scale);
       ctx.restore();
     }
   });
@@ -355,6 +395,34 @@ function initCanvasGraph() {
 
   canvas.addEventListener('pointerup', () => { drag.active = false; });
 
+  // Keyboard navigation for the canvas (accessibility)
+  canvas.addEventListener('keydown', e => {
+    const PAN = 60;
+    switch (e.key) {
+      case 'ArrowLeft':  transform.x += PAN; break;
+      case 'ArrowRight': transform.x -= PAN; break;
+      case 'ArrowUp':    transform.y += PAN; break;
+      case 'ArrowDown':  transform.y -= PAN; break;
+      case '+': case '=': zoomButton(1.25); return;
+      case '-': case '_': zoomButton(0.8); return;
+      case 'Tab': {
+        // Cycle highlight through nodes
+        e.preventDefault();
+        const idx = nodes.findIndex(n => n.id === hoveredId);
+        const next = e.shiftKey ? (idx - 1 + nodes.length) % nodes.length : (idx + 1) % nodes.length;
+        hoveredId = nodes[next].id;
+        focusGraphNode(hoveredId, { open: false });
+        return;
+      }
+      case 'Enter': case ' ':
+        if (hoveredId) { e.preventDefault(); openExhibit(hoveredId); }
+        return;
+      default: return;
+    }
+    e.preventDefault();
+    scheduleRender();
+  });
+
   canvasInited = true;
 }
 
@@ -453,29 +521,237 @@ function buildMobileList() {
   listBuilt = true;
 }
 
+// View preference: null = auto (graph on desktop, list on mobile), or forced 'graph' | 'list'
+let viewPref = null;
+
+function listMode() {
+  return viewPref === 'list' || (viewPref === null && isMobile());
+}
+
 function applyMode() {
-  const canvasEl = document.getElementById('graph-canvas');
+  const stage = document.querySelector('.graph-stage');
   const listEl = document.getElementById('influence-list');
   const hintDesktop = document.querySelector('.graph-hint-desktop');
   const hintMobile = document.querySelector('.graph-hint-mobile');
+  const showList = listMode();
 
-  if (isMobile()) {
-    if (canvasEl) canvasEl.style.display = 'none';
+  if (showList) {
+    if (stage) stage.hidden = true;
     if (listEl) listEl.hidden = false;
     if (hintDesktop) hintDesktop.hidden = true;
     if (hintMobile) hintMobile.hidden = false;
     buildMobileList();
   } else {
-    if (canvasEl) canvasEl.style.display = '';
+    if (stage) stage.hidden = false;
     if (listEl) listEl.hidden = true;
     if (hintDesktop) hintDesktop.hidden = false;
     if (hintMobile) hintMobile.hidden = true;
     if (!canvasInited) initCanvasGraph();
+    else scheduleRender();
   }
+
+  // Reflect in the view toggle
+  const gBtn = document.getElementById('view-graph');
+  const lBtn = document.getElementById('view-list');
+  if (gBtn && lBtn) {
+    gBtn.classList.toggle('active', !showList);
+    lBtn.classList.toggle('active', showList);
+    gBtn.setAttribute('aria-selected', String(!showList));
+    lBtn.setAttribute('aria-selected', String(showList));
+  }
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function graphVisible() {
+  const stage = document.querySelector('.graph-stage');
+  return canvasInited && stage && !stage.hidden;
+}
+
+/* ── Zoom + pan controls ─────────────────────────────────────────── */
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function zoomAround(cx, cy, factor) {
+  const newScale = clamp(transform.scale * factor, 0.5, 3.0);
+  const ratio = newScale / transform.scale;
+  transform.x = cx - ratio * (cx - transform.x);
+  transform.y = cy - ratio * (cy - transform.y);
+  transform.scale = newScale;
+}
+
+function zoomButton(factor) {
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  zoomAround(rect.width / 2, rect.height / 2, factor);
+  scheduleRender();
+}
+
+function resetView() {
+  tweenTransform({ x: 0, y: 0, scale: 1 });
+}
+
+function tweenTransform(target, dur = 450) {
+  if (prefersReducedMotion()) {
+    Object.assign(transform, target);
+    scheduleRender();
+    return;
+  }
+  const start = { x: transform.x, y: transform.y, scale: transform.scale };
+  const t0 = performance.now();
+  function step(now) {
+    const p = Math.min((now - t0) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    transform.x = start.x + (target.x - start.x) * e;
+    transform.y = start.y + (target.y - start.y) * e;
+    transform.scale = start.scale + (target.scale - start.scale) * e;
+    if (!isAnimating) render(now);
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Center a node in the viewport and highlight it; optionally open its panel.
+export function focusGraphNode(id, { open = false, highlight = true } = {}) {
+  if (!graphVisible()) {
+    if (open) openExhibit(id);
+    return;
+  }
+  const pos = layout[id];
+  if (!pos || !canvas) { if (open) openExhibit(id); return; }
+  const rect = canvas.getBoundingClientRect();
+  const scale = Math.max(transform.scale, 1.6);
+  if (highlight) { hoveredId = id; }
+  tweenTransform({ scale, x: rect.width / 2 - pos.x * scale, y: rect.height / 2 - pos.y * scale });
+  if (open) setTimeout(() => openExhibit(id), 500);
+}
+
+/* ── Search ──────────────────────────────────────────────────────── */
+function initSearch() {
+  const input = document.getElementById('graph-search');
+  const list = document.getElementById('graph-search-results');
+  if (!input || !list) return;
+
+  let activeIdx = -1;
+  let matches = [];
+
+  const close = () => {
+    list.hidden = true;
+    list.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    activeIdx = -1;
+    matches = [];
+  };
+
+  const select = (id) => {
+    close();
+    input.blur();
+    if (graphVisible()) focusGraphNode(id, { open: true });
+    else { scrollToExhibit(id); setTimeout(() => openExhibit(id), 350); }
+  };
+
+  const render = () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { close(); return; }
+    matches = exhibits.filter(e =>
+      e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q)
+    ).slice(0, 8);
+    if (!matches.length) {
+      list.innerHTML = '<li class="search-empty" role="option">Kein Treffer</li>';
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    list.innerHTML = matches.map((e, i) => `
+      <li role="option" id="search-opt-${i}" data-id="${e.id}"
+          aria-selected="${i === activeIdx}"
+          class="${i === activeIdx ? 'active' : ''}">
+        <span class="search-dot" style="background:var(--${e.strand})"></span>
+        <span class="search-name">${e.name.split(' — ')[0]}</span>
+        <span class="search-date">${e.date}</span>
+      </li>`).join('');
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    [...list.querySelectorAll('li[data-id]')].forEach(li => {
+      li.addEventListener('mousedown', ev => { ev.preventDefault(); select(li.dataset.id); });
+    });
+  };
+
+  input.addEventListener('input', () => { activeIdx = -1; render(); });
+  input.addEventListener('focus', () => { if (input.value.trim()) render(); });
+  input.addEventListener('blur', () => setTimeout(close, 150));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' && matches.length) {
+      e.preventDefault(); activeIdx = (activeIdx + 1) % matches.length; render();
+    } else if (e.key === 'ArrowUp' && matches.length) {
+      e.preventDefault(); activeIdx = (activeIdx - 1 + matches.length) % matches.length; render();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (matches.length) select(matches[activeIdx >= 0 ? activeIdx : 0].id);
+    } else if (e.key === 'Escape') {
+      input.value = ''; close();
+    }
+  });
+}
+
+/* ── View toggle + zoom buttons + help hint ──────────────────────── */
+function initControls() {
+  document.getElementById('zoom-in')?.addEventListener('click', () => zoomButton(1.25));
+  document.getElementById('zoom-out')?.addEventListener('click', () => zoomButton(0.8));
+  document.getElementById('zoom-reset')?.addEventListener('click', resetView);
+
+  const gBtn = document.getElementById('view-graph');
+  const lBtn = document.getElementById('view-list');
+  gBtn?.addEventListener('click', () => { viewPref = 'graph'; applyMode(); });
+  lBtn?.addEventListener('click', () => { viewPref = 'list'; applyMode(); });
+
+  // Help hint card
+  const help = document.getElementById('graph-help');
+  const card = document.getElementById('graph-hintcard');
+  const closeCard = card?.querySelector('.hintcard-close');
+  const toggleCard = (show) => {
+    if (!card || !help) return;
+    const open = show ?? card.hidden;
+    card.hidden = !open;
+    help.setAttribute('aria-expanded', String(open));
+  };
+  help?.addEventListener('click', () => toggleCard());
+  closeCard?.addEventListener('click', () => toggleCard(false));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && card && !card.hidden) toggleCard(false);
+  });
+}
+
+let firstGraphReveal = false;
+function initOnboarding() {
+  // Auto-show the hint card once per session when the graph first scrolls into view.
+  const card = document.getElementById('graph-hintcard');
+  const help = document.getElementById('graph-help');
+  const map = document.getElementById('influence-map');
+  if (!card || !map) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !firstGraphReveal && graphVisible()) {
+        firstGraphReveal = true;
+        card.hidden = false;
+        help?.setAttribute('aria-expanded', 'true');
+        io.disconnect();
+      }
+    });
+  }, { threshold: 0.35 });
+  io.observe(map);
 }
 
 function initGraph() {
   applyMode();
+  initSearch();
+  initControls();
+  initOnboarding();
+
+  // Re-render the canvas when the strand filter changes
+  const filterObs = new MutationObserver(() => scheduleRender());
+  filterObs.observe(document.body, { attributes: true, attributeFilter: ['data-strand-filter'] });
 
   let resizeTimer;
   window.addEventListener('resize', () => {

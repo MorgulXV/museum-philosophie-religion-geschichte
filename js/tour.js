@@ -64,12 +64,13 @@ function updateTourBar() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const toggle = () => { if (tourActive) { stopTour(); } else { startTour(); } };
   const btn = tourBtn();
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (tourActive) { stopTour(); } else { startTour(); }
-    });
-  }
+  if (btn) btn.addEventListener('click', toggle);
+  // Hero CTA and any other tour-start triggers
+  document.querySelectorAll('[data-tour-start]').forEach(el => {
+    el.addEventListener('click', () => { if (!tourActive) startTour(); });
+  });
 
   const nextBtn = document.getElementById('tour-next');
   if (nextBtn) nextBtn.addEventListener('click', advanceTour);

@@ -60,6 +60,13 @@ function renderLobby() {
       Dieses Museum zeigt die Kausalkette: welche Ideen welche Ideen auslösten und welche Ereignisse das Denken erzwangen.
       In fünf Räumen, drei Strängen und 39 Exponaten, von Pythagoras bis zu den Vier Reitern.
     </p>
+    <div class="lobby-actions">
+      <button class="lobby-cta" data-tour-start aria-label="Geführten Rundgang starten">Rundgang starten</button>
+      <a class="lobby-cta-secondary" href="#influence-map">Einflussgraph ansehen ↓</a>
+    </div>
+    <p class="lobby-stats" aria-label="Umfang der Sammlung">
+      <span>39 Exponate</span><span>5 Räume</span><span>73 Einflusskanten</span><span>ca. 530 v.&nbsp;Chr. – 2009 n.&nbsp;Chr.</span>
+    </p>
     <nav class="room-nav" aria-label="Raum-Navigation">
       ${rooms.map((room, idx) => `
         <button class="room-nav-btn" data-room="${room.id}"
@@ -179,19 +186,40 @@ function setupScrollSpy() {
 }
 
 function setupStrandFilter() {
-  const buttons = document.querySelectorAll('#strand-filter .filter-btn');
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const strand = btn.dataset.strand;
-      if (strand === 'alle') {
-        document.body.removeAttribute('data-strand-filter');
-      } else {
-        document.body.dataset.strandFilter = strand;
-      }
+  const buttons = [...document.querySelectorAll('#strand-filter .filter-btn')];
+  const legendKeys = [...document.querySelectorAll('.legend-key')];
+  const countEl = document.getElementById('filter-count');
+
+  const counts = STRANDS
+    ? Object.fromEntries(Object.keys(STRAND_LABELS).map(s => [s, exhibits.filter(e => e.strand === s).length]))
+    : {};
+
+  function setFilter(strand) {
+    const active = strand && strand !== 'alle' ? strand : null;
+    if (active) document.body.dataset.strandFilter = active;
+    else document.body.removeAttribute('data-strand-filter');
+
+    buttons.forEach(b => {
+      const on = (b.dataset.strand === 'alle' && !active) || b.dataset.strand === active;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
     });
-  });
+    legendKeys.forEach(k => k.classList.toggle('active', k.dataset.strand === active));
+    if (countEl) {
+      countEl.textContent = active
+        ? `${STRAND_LABELS[active]} — ${counts[active]} Exponate`
+        : `${exhibits.length} Exponate`;
+    }
+  }
+
+  buttons.forEach(btn => btn.addEventListener('click', () => setFilter(btn.dataset.strand)));
+  legendKeys.forEach(key => key.addEventListener('click', () => {
+    // toggle: clicking the active legend key clears the filter
+    const cur = document.body.dataset.strandFilter || null;
+    setFilter(cur === key.dataset.strand ? 'alle' : key.dataset.strand);
+  }));
+
+  setFilter('alle');
 }
 
 function resolveDeepLink() {
