@@ -344,7 +344,7 @@ function initCanvasGraph() {
     const id = hitTest(e.clientX - rect.left, e.clientY - rect.top);
     if (id !== hoveredId) {
       hoveredId = id;
-      canvas.style.cursor = id ? 'pointer' : 'crosshair';
+      canvas.style.cursor = id ? 'pointer' : 'grab';
       scheduleRender();
     }
   });
